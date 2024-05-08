@@ -1,0 +1,33 @@
+{
+  "name": "electron-ffmpeg-demo",
+  "version": "1.0.0",
+  "description": "this is a demo for using ffmpeg in electron",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch:build": "postcss static/src/app.css -o static/app.css --watch",
+    "watch:electron": "nodemon --exec electron . -e js,html",
+    "watch": "npm-run-all --parallel watch:*"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ffmpeg-static-electron": "^2.0.3",
+    "ffprobe-static-electron": "^2.0.2",
+    "fluent-ffmpeg": "^2.1.2",
+    "jquery": "^3.7.1",
+    "sharp": "^0.33.3"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.19",
+    "electron": "^30.0.2",
+    "electron-builder": "^24.13.3",
+    "electron-reload": "^2.0.0-alpha.1",
+    "npm-run-all": "^4.1.5",
+    "postcss": "^8.4.38",
+    "postcss-cli": "^11.0.0",
+    "tailwindcss": "^3.4.3"
+  }
+}

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <meta charset="utf-8" />
+  <title>Render and upload</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="static/app.css" />
+
+  <div
+    class="flex flex-col justify-center items-center gap-4 w-screen h-screen"
+  >
+    <div class="ui top attached tabular menu">
+      <a class="item" data-tab="first">Thêm logo</a>
+      <a class="item active" data-tab="second">Lấy link phát</a>
+      <a class="item" data-tab="third">Upload bài viết</a>
+    </div>
+    <!-- First tab content -->
+    <div class="ui bottom attached tab segment h-full" data-tab="first">
+      <div class="flex flex-col items-center justify-center space-y-3">
+        <div class="flex flex-row gap-4 justify-start items-center">
+          <label class="text-left font-lg" for="folder">Thư mục video: </label>
+          <div class="flex flex-row items-center w-96">
+            <input
+              type="text"
+              class="outline-none flex-grow border border-gray-300 rounded-l h-12 p-4"
+              name="folder"
+              id="folder"
+              disabled
+            />
+            <button
+              class="outline-none bg-gray-200 hover:bg-gray-400 border-t border-r border-b border-gray-300 h-12 px-4 -ml-1 rounded-r"
+              id="folder-btn"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 inline-block"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"
+                />
+              </svg>
+              Chọn
+            </button>
+          </div>
+        </div>
+
+        <button
+          class="outline-none bg-blue-400 hover:bg-blue-700 px-8 py-2 text-white uppercase mx-auto mt-4"
+          id="action-btn"
+        >
+          <i class="images icon" style="visibility: visible"></i>
+          Xử lý
+        </button>
+        <div
+          class="w-[65vw] mx-auto flex flex-col h-[360px] overflow-hidden overflow-y-auto border border-gray-300 rounded-lg shadow-lg p-4 bg-white"
+          id="progressDiv"
+        >
+          <div class="item mt-2">
+            <!-- <div class="ui indicating progress tiny" id="progress">
+              <div class="bar"></div>
+              <div class="label truncate">Dang xu ly</div>
+            </div> -->
+          </div>
+        </div>
+        <div class="w-[65vw] mx-auto">
+          <p class="text-left text-slate-700">
+            *Chọn thư mục có video để tự động thêm logo và tạo ảnh, Lưu ý đổi
+            tên video cho phù hợp nội dung hấp dẫn nhất có thể !!
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2nd tab content -->
+    <div class="ui bottom attached tab segment active h-full" data-tab="second">
+      <div class="flex flex-col items-center justify-center space-y-3">
+        <div class="flex flex-row gap-4 justify-start items-center">
+          <label class="text-left font-lg" for="folder">Thư mục video: </label>
+          <div class="flex flex-row items-center w-96">
+            <input
+              type="text"
+              class="outline-none flex-grow border border-gray-300 rounded-l h-12 p-4"
+              name="folder"
+              id="folder"
+              disabled
+            />
+            <button
+              class="outline-none bg-gray-200 hover:bg-gray-400 border-t border-r border-b border-gray-300 h-12 px-4 -ml-1 rounded-r"
+              id="folder-btn"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 inline-block"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"
+                />
+              </svg>
+              Chọn
+            </button>
+          </div>
+        </div>
+
+        <button
+          class="outline-none bg-blue-400 hover:bg-blue-700 px-8 py-2 text-white uppercase mx-auto mt-4"
+          id="action-btn"
+        >
+          <i class="linkify icon" style="visibility: visible"></i>
+          Lấy link phát
+        </button>
+        <div
+          class="w-[65vw] mx-auto flex flex-col h-[350px] overflow-hidden overflow-y-auto border border-gray-300 rounded-lg shadow-lg p-4 bg-white"
+          id="progressDiv"
+        >
+          <div class="item mt-2">
+            <!-- <div class="ui indicating progress tiny" id="progress">
+              <div class="bar"></div>
+              <div class="label truncate">Dang xu ly</div>
+            </div> -->
+          </div>
+        </div>
+        <div class="w-[65vw] mx-auto">
+          <p class="text-left text-slate-700">
+            *Chọn thư mục có video đã được render logo, Những video này sẽ được
+            tải lên server và trả về link phát dùng để đăng bài lên website!
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!--3nd tab content  -->
+    <div class="ui bottom attached tab segment h-full" data-tab="third">
+
+
+      <div class="ui grid">
+        <div class="four wide column">
+          <div class="ui vertical fluid tabular menu">
+            <a class="item"> Bio </a>
+            <a class="item"> Pics </a>
+            <a class="item"> Companies </a>
+            <a class="item active"> Links </a>
+
+          </div>
+        </div>
+        <div class="twelve wide stretched column">
+          <div class="ui segment">
+            This is an stretched grid column. This segment will always match the
+            tab height
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- You MUST include jQuery 3.4+ before Fomantic -->
+    <script>
+      window.$ = window.jQuery = require("jquery");
+    </script>
+    <script src="static/app.js"></script>
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.3/dist/semantic.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.3/dist/semantic.min.js"></script>
+    <style>
+      .ui.segment[class*="bottom attached"] {
+        margin-bottom: 0px;
+      }
+    </style>
+  </div>
+</html>
