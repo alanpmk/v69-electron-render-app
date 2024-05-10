@@ -504,6 +504,24 @@ video {
 .visible {
   visibility: visible;
 }
+.absolute {
+  position: absolute;
+}
+.relative {
+  position: relative;
+}
+.right-0 {
+  right: 0px;
+}
+.top-0 {
+  top: 0px;
+}
+.right-1 {
+  right: 0.25rem;
+}
+.top-1 {
+  top: 0.25rem;
+}
 .mx-auto {
   margin-left: auto;
   margin-right: auto;
@@ -598,6 +616,9 @@ video {
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+.cursor-pointer {
+  cursor: pointer;
+}
 .flex-row {
   flex-direction: row;
 }
@@ -685,6 +706,9 @@ video {
 }
 .text-center {
   text-align: center;
+}
+.font-medium {
+  font-weight: 500;
 }
 .text-slate-700 {
   --tw-text-opacity: 1;

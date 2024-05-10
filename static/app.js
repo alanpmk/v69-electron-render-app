@@ -1,6 +1,6 @@
 const { ipcRenderer } = require("electron");
-const { event, each } = require("jquery");
 window.$ = window.jQuery = require('jquery');
+
 let logoPath = '';
 document.onreadystatechange = (event) => {
   $('.menu .item').tab()
@@ -8,13 +8,21 @@ document.onreadystatechange = (event) => {
     .dropdown({
       allowAdditions: true
     });
+  $(document).on('click', '.removePost', function () {
+    $(this).closest('.ui.segment').remove();
+  });
 };
+
 /*---------------------------------------*/
 /* HANDLE ALL EVENTS CLICKER
 /*---------------------------------------*/
 
 
-// Handle select folder button click
+/*----------------------------*/
+/*---RENDER TAB HANDLE
+/*----------------------------*/
+
+// Chọn thư mục chứa video cần thêm logo
 document.querySelector("#folder-btn").addEventListener("click", () => {
   $('#progressDiv').empty();
   ipcRenderer
@@ -28,22 +36,8 @@ document.querySelector("#folder-btn").addEventListener("click", () => {
       console.log(err)
     });
 });
-// Handle select get link folder button click
-document.querySelector("#folder-getlink-btn").addEventListener("click", () => {
-  $('#progressGetlinkDiv').empty();
-  ipcRenderer
-    .invoke("select-folder")
-    .then((data) => {
-      if (!data.canceled) {
-        document.querySelector("#actionFolderGetlinkInput").value = data.filePaths[0];
-      }
-    })
-    .catch((err) => {
-      console.log(err)
-    });
-});
 
-
+// Check logo is png or jpg
 document.getElementById('actionfileinput').addEventListener('change', function () {
   var file = this.files[0];
   var fileType = file.type;
@@ -70,6 +64,7 @@ document.getElementById('actionfileinput').addEventListener('change', function (
   logoPath = file.path;
 });
 
+//Click xử lý render video
 document.querySelector("#action-btn").addEventListener("click", () => {
   const folder = document.querySelector("#actionfolderinput").value;
   const logo = logoPath;
@@ -99,6 +94,28 @@ document.querySelector("#action-btn").addEventListener("click", () => {
     }
   });
 });
+
+
+/*----------------------------*/
+/*---GETLINK TAB HANDLE
+/*----------------------------*/
+
+// Handle select get link folder button click
+document.querySelector("#folder-getlink-btn").addEventListener("click", () => {
+  $('#progressGetlinkDiv').empty();
+  ipcRenderer
+    .invoke("select-folder")
+    .then((data) => {
+      if (!data.canceled) {
+        document.querySelector("#actionFolderGetlinkInput").value = data.filePaths[0];
+      }
+    })
+    .catch((err) => {
+      console.log(err)
+    });
+});
+
+
 //Xử lý sự kiện click nút getlink
 document.querySelector("#action-getlink-btn").addEventListener("click", () => {
   const folder = document.querySelector("#actionFolderGetlinkInput").value;
@@ -127,7 +144,25 @@ document.querySelector("#action-getlink-btn").addEventListener("click", () => {
   });
 });
 
-//Config tab submit clicked
+
+/*----------------------------*/
+/*---CONFIG TAB HANDLE
+/*----------------------------*/
+
+//Click vào config tab
+document.querySelector("#config-tab").addEventListener("click", () => {
+  ipcRenderer.invoke("load-config", {}).then((data) => {
+    //insert data from data object to the inputs of jsonConfigForm form
+    Object.keys(data).forEach(key => {
+      const input = document.querySelector(`#jsonConfigForm input[name="${key}"]`);
+      if (input) {
+        input.value = data[key];
+      }
+    });
+  });
+})
+
+//Lưu config Form
 document.querySelector("#jsonConfigForm").addEventListener("submit", (event) => {
   // Prevent the form from submitting normally
   event.preventDefault();
@@ -148,51 +183,142 @@ document.querySelector("#jsonConfigForm").addEventListener("submit", (event) => 
   ipcRenderer.invoke("save-jsonconfig", { jsonconfig: inputValues }).then((data) => { });
 });
 
-//Click vào config tab
-document.querySelector("#config-tab").addEventListener("click", () => {
-  ipcRenderer.invoke("load-config", {}).then((data) => {
-    //insert data from data object to the inputs of jsonConfigForm form
-    Object.keys(data).forEach(key => {
-      const input = document.querySelector(`#jsonConfigForm input[name="${key}"]`);
-      if (input) {
-        input.value = data[key];
-      }
-    });
-  });
-})
+/*----------------------------*/
+/*---UPLOAD TAB HANDLE
+/*----------------------------*/
 
-//tab upload bai viet click #upload-post tab
+//Click vào upload bài viết tab - check và load token
 document.querySelector("#upload-post").addEventListener("click", () => {
+
   ipcRenderer.invoke("upload-tab-clicked", {}).then((data) => {
-    console.log(data.message);
-    console.log('categories : ', data.categories);
-    console.log('tags : ', data.tags);
-    //write code fill data.categories to select with name="categories_select" , <option value=category.id>category.name</option>
-    const categories = data.categories;
-    const tags = data.tags;
-    const selectCatElement = document.querySelector('select[name="categories_select"]');
-    const selectTagElement = document.querySelector('select[name="tags_select"]');
-    categories.forEach(category => {
-      const optionElement = document.createElement('option');
-      optionElement.value = category.id;
-      optionElement.textContent = category.name;
-      selectCatElement.appendChild(optionElement);
-    });
-    tags.forEach(tag => {
-      const optionElement = document.createElement('option');
-      optionElement.value = tag.id;
-      optionElement.textContent = tag.name;
-      selectTagElement.appendChild(optionElement);
-    });
+    if (data.message === 'success') {
+      console.log('Đã load token');
+    }
+    else {
+      console.log('Chưa load token');
+    }
   });
 });
 
+// Click nút chọn folder chứa video và ảnh đã render
+document.querySelector("#folder-upload-btn").addEventListener("click", () => {
+  ipcRenderer
+    .invoke("select-folder")
+    .then((data) => {
+      if (!data.canceled) {
+        document.querySelector("#actionFolderUpLoadInput").value = data.filePaths[0];
+        ipcRenderer.invoke("load-post-from-folder", { folder: data.filePaths[0] }).then((data) => {
+          postObjects = data.postObjects;
+          console.log(postObjects);
 
+          let categoriesSelectOptionHTML = `<option value="">Chọn danh mục nội dung cho video</option>`;
+          data.categories.forEach(element => {
+            let optionsHTML = `<option value="${element.id}">${element.name}</option>`;
+            categoriesSelectOptionHTML += optionsHTML;
+          });
+          let tagsSelectOptionHTML = `<option value="">Chọn tag nội dung cho video</option>`;
+          data.tags.forEach(element => {
+            let optionsHTML = `<option value="${element.id}">${element.name}</option>`;
+            tagsSelectOptionHTML += optionsHTML;
+          });
+          $('#postContentsWrapper').empty();
+          $('#postContentsWrapper').append(`<h5 style="margin-bottom:0px">Có ${postObjects.length} video được tìm thấy!</h5>`);
+          postObjects.forEach((post, index) => {
+            $('#postContentsWrapper').append(`
+              <h5 class="ui horizontal divider header truncate">
+                ${post.title}
+            </h5>
+              <div class="ui segment relative">
+                        <div class="absolute right-1 top-1 cursor-pointer removePost">
+            <i class="times circle icon red"></i>
+          </div>
+          <form class="ui form" id="formPost-${index}">
+            <div class="fields">
+              <div class="sixteen wide field">
+                <label>Tiêu đề bài viết</label>
+                <input type="text" placeholder="Chọn tiêu đề cho video, nhớ giống với tên video đã sửa.." value="${post.title}" name="title">
+              </div>
+            </div>
+            <div class="fields">
+              <div class="sixteen wide field">
+                <label>Nội dung</label>
+                <textarea rows="2" placeholder="Ghi nội dung cho bài viết, có thể để trống.." name="content">${post.title}</textarea>
+              </div>
+            </div>
+            <div class="fields">
+              <div class="sixteen wide field">
+                <label>Link embed video</label>
+                <input type="text" placeholder="Link embed video lấy từ web lấy link.." name="link">
+              </div>
+            </div>
+            <div class="fields">
+              <div class="sixteen wide field">
+                <label>Chọn danh mục</label>
+                    <select class="ui fluid search four column selection dropdown" multiple="" name="categories_select">
+                    </select>
+              </div>
+            </div>
+            <div class="fields">
+              <div class="sixteen wide field">
+                <label>Chọn tag</label>
+                <select class="ui fluid search four column selection dropdown" multiple="" name="tags_select">
+                </select>
+              </div>
+            </div>
+            <div class="fields">
+              <div class="sixteen wide field">
+                <label>Ảnh đại diện</label>
+                <img class="ui small image"
+                  src="${post.imagePath}">
+              </div>
+            </div>
+          </form>
+        </div>
+            `);
+            // Append the options and initialize the dropdown for this form
+            $(`#formPost-${index} select[name="categories_select"]`).append(categoriesSelectOptionHTML);
+            $(`#formPost-${index} select[name="tags_select"]`).append(tagsSelectOptionHTML);
+            $(`#formPost-${index} select[name="tags_select"]`).dropdown('set selected', ['194', '243']);
+            $(`#formPost-${index} .ui.dropdown`).dropdown({ allowAdditions: true });
+            $(`#formPost-${index} .ui.dropdown`).dropdown('refresh');
+          });
+
+        });
+      }
+    })
+    .catch((err) => {
+      console.log(err)
+    });
+});
+
+//CLick nút Đăng bài viết
+document.querySelector("#PostContentsBtn").addEventListener("click",()=>{
+  console.log('dang bai viet');
+  var allFormData = [];
+
+  $('[id^=formPost-]').each(function () {
+    var formData = $(this).serializeArray();
+    var formDataObj = formData.reduce(function (acc, cur) {
+      acc[cur.name] = cur.value;
+      return acc;
+    }, {});
+
+    // Handle multiple select fields
+    formDataObj['tags_select'] = $(this).find('select[name="tags_select"]').val();
+    formDataObj['categories_select'] = $(this).find('select[name="categories_select"]').val();
+
+    allFormData.push(formDataObj);
+  });
+
+  console.log('Du lieu de upload la: ', allFormData);
+  ipcRenderer.invoke("post-to-website", { postObjects: allFormData }).then((data) => {
+    console.log(data);
+  });
+})
 
 /*---------------------------------------*/
-/* HANDLE [ipcRenderer.on] EVENTS [from main.js
+/* HANDLE [ipcRenderer.on] EVENTS from main.js
 /*---------------------------------------*/
-
 
 //ipcRender from main.js
 ipcRenderer.on("render-progressbar", (event, data) => {

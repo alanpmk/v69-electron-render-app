@@ -111,8 +111,8 @@
         </button>
         <div class="w-[60vw] flex-1">
           <div class="ui fluid action input">
-            <input id="actionFolderGetlinkInput" type="text" placeholder="Hoặc chọn thư mục video đã thêm logo..." />
-            <label for="actionFolderGetlinkInput" id="folder-getlink-btn"
+            <input id="actionFolderUpLoadInput" type="text" placeholder="Hoặc chọn thư mục video đã thêm logo..." />
+            <label for="actionFolderGetlinkInput" id="folder-upload-btn"
               class="ui blue button w-[125px] justify-center">
               <i class="folder open icon"></i>
               Chọn
@@ -123,12 +123,21 @@
 
       <!-- Post content -->
       <div class="w-full ui segment h-[70vh] overflow-y-scroll mt-2 p-2" id="postContentsWrapper">
-        <div class="ui segment">
-          <div class="ui form">
+        <div class="ui segment relative">
+          <div class="absolute right-1 top-1 cursor-pointer removePost">
+            <i class="times circle icon red"></i>
+          </div>
+          <form class="ui form">
             <div class="fields">
               <div class="sixteen wide field">
                 <label>Tiêu đề bài viết</label>
                 <input type="text" placeholder="Chọn tiêu đề cho video, nhớ giống với tên video đã sửa..">
+              </div>
+            </div>
+            <div class="fields">
+              <div class="sixteen wide field">
+                <label>Nội dung</label>
+                <textarea rows="2" placeholder="Ghi nội dung cho bài viết, có thể để trống.."></textarea>
               </div>
             </div>
             <div class="fields">
@@ -160,7 +169,7 @@
                   src="https://repository-images.githubusercontent.com/260096455/47f1b200-8b2e-11ea-8fa1-ab106189aeb0">
               </div>
             </div>
-          </div>
+          </form>
 
         </div>
 

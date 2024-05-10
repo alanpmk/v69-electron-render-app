@@ -20,9 +20,11 @@ ffmpeg.setFfprobePath(ffprobePath);
 const ffprobe = util.promisify(require('fluent-ffmpeg').ffprobe);
 // Declare store
 const store = new Store();
-// let watermarkPath = (path.join(__dirname, 'static', 'viet69watermark.png'));
-// watermarkPath = watermarkPath.replace('app.asar', 'app.asar.unpacked');
-
+// const https = require('https');
+// const agent = new https.Agent({
+//   rejectUnauthorized: false
+// });
+// axios.defaults.httpsAgent = agent;
 
 // Khai báo biến mainWin để lưu trữ Window
 let mainWin;
@@ -70,7 +72,7 @@ app.on("window-all-closed", () => {
 //load config file if not exits first time
 const userDataPath = app.getPath('userData');
 const configPath = path.join(__dirname, "config.json");
-const destinationConfigPath = path.join(userDataPath, 'config.json');
+const destinationConfigPath = path.join(userDataPath, 'Uconfig.json');
 const dbPath = path.join(userDataPath, 'db.json');
 
 // Check if the file exists at destinationConfigPath
@@ -115,6 +117,155 @@ function saveDb(db) {
 ipcMain.handle('load-config', async () => {
   return loadConfig();
 })
+
+
+/**--------------------------------------------------------------------- */
+/**----Declaratation of function to process WPAPI-----------------------**/
+/**--------------------------------------------------------------------- */
+const userConfig = loadConfig();
+const wp = new WPAPI({ endpoint: `${userConfig.WP_HOST}/wp-json` });
+
+async function saveJWTToken(WP_HOST, username, password) {
+  try {
+    // Request a JWT token
+    const response = await axios.post(`${WP_HOST}/wp-json/jwt-auth/v1/token`, {
+      username,
+      password
+    });
+
+    if (response.data.token) {
+      store.set('jwt_token', response.data.token);
+      return true;
+    }
+  } catch (error) {
+    console.error('An error occurred:', error);
+  }
+}
+function setWpHeaders() {
+  wp.setHeaders('Authorization', `Bearer ${store.get('jwt_token')}`);
+}
+
+async function checkValidJWTToken() {
+  try {
+    if (!store.has('jwt_token')) {
+      return false;
+    }
+    const response = await axios.post(`${userConfig.HOST_API}/wp-json/jwt-auth/v1/token/validate`, {}, {
+      headers: {
+        Authorization: `Bearer ${store.get('jwt_token')}`
+      }
+    });
+
+    if (response.data.data.status === 403) {
+      return false;
+    }
+    return response.data.data.status === 200;
+  } catch (error) {
+    // console.error('An error occurred:', error);
+  }
+
+}
+
+
+function getOrCreateTaxonomy(taxonomy, name) {
+  // If the item doesn't exist, create it and return its ID
+  const slug = name.toLowerCase().replace(/ /g, '-');
+  return taxonomy.create({ name, slug }).then(item => item.id);
+}
+
+//Get categories and tags
+async function getAllItems(type) {
+  let items = [];
+  let pageNumber = 1;
+  let areMoreItems = true;
+
+  while (areMoreItems) {
+    const newItems = await type.perPage(100).page(pageNumber).get();
+    items = items.concat(newItems);
+    if (newItems.length < 100) {
+      areMoreItems = false;
+    } else {
+      pageNumber++;
+    }
+  }
+
+  return items;
+}
+
+async function getCategoriesAndTags() {
+  try {
+    const categories = await getAllItems(wp.categories());
+    const tags = await getAllItems(wp.tags());
+    return { categories, tags };
+  } catch (error) {
+    console.error('An error occurred:', error);
+  }
+}
+
+
+async function createPost(title, content, categories, tags, embed, imagePath, postViewsCount) {
+  try {
+    // Upload the image and get the media item
+    // const media = await wp.media().file(imagePath).create();
+
+    // // Get the image link
+    // const thumb = media.source_url;
+    // // Get the image ID
+    // const featured_media = media.id;
+    // console.log(thumb);
+
+    // Get or create the categories and tags
+    const categoryIds = await Promise.all(categories.map(item => !isNaN(Number(item)) ? Number(item) : getOrCreateTaxonomy(wp.categories(), item)));
+    const tagIds = await Promise.all(tags.map(item => !isNaN(Number(item)) ? Number(item) : getOrCreateTaxonomy(wp.tags(), item)));
+
+    console.log('categoryIds: ', categoryIds, ' tagIds: ', tagIds);
+    return 1;
+    // Create the post with the category and tag IDs, the meta, and the image link
+    // const post = await wp.posts().create({
+    //   title,
+    //   content,
+    //   // status: 'draft',
+    //   status: 'publish',
+    //   categories: categoryIds,
+    //   tags: tagIds,
+    //   featured_media,
+    //   meta: {
+    //     embed: embed,
+    //     thumb: thumb,
+    //     post_views_count: postViewsCount
+    //   }
+    // });
+
+    console.log('Đa post bai xong ID:', post.id);
+  } catch (err) {
+    console.error('An error occurred:', err);
+  }
+}
+let allPosts = [];
+
+function getAllPosts(page = 1) {
+  return wp.posts().perPage(100).page(page).get()
+    .then(posts => {
+      allPosts = allPosts.concat(posts);
+      console.log('Fetched page: ', page);
+      if (posts.length === 100) {
+        // If we received 100 posts, there might be more posts in the next page.
+        return getAllPosts(page + 1);
+      } else {
+        // If we received less than 100 posts, we've fetched all posts.
+        return allPosts;
+      }
+    });
+}
+
+async function createPostWithValidToken(title, content, categoryNames, tagNames, embed, thumb, postViewsCount) {
+  const isValid = await checkValidJWTToken();
+  if (!isValid) {
+    await saveJWTToken(process.env.HOST_API, process.env.USERNAMEV, process.env.PASSWORD);
+  }
+  setWpHeaders();
+  await createPost(title, content, categoryNames, tagNames, embed, thumb, postViewsCount);
+}
 
 
 /**--------------------------------------------------------------------- */
@@ -330,8 +481,6 @@ ipcMain.handle("render", async (_, data) => {
 // handle xử lý upload video lên helvid và getlink video
 ipcMain.handle("getlink", async (_, data) => {
 
-  // const originVideosDir = data.folder;
-  // const renderedVideosDir = path.join(data.folder, 'rendered_videos');
   const inputDir = data.folder;
   const files = await fs.promises.readdir(inputDir);
   const config = loadConfig();
@@ -460,95 +609,58 @@ ipcMain.handle("getlink", async (_, data) => {
   return { status: 'success', allVideos: res };
 });
 
-/**--------------------------------------------------------------------- */
-/**----Declaratation of function to process WPAPI-----------------------**/
-/**--------------------------------------------------------------------- */
-const userConfig = loadConfig();
-const wp = new WPAPI({ endpoint: `${userConfig.WP_HOST}/wp-json` });
+//Xử lý lấy thông tin video và ảnh từ folder load lên nội dung bài viết
+ipcMain.handle('load-post-from-folder', async (_, data) => {
+  const inputDir = data.folder;
+  const files = await fs.promises.readdir(inputDir);
+  const config = loadConfig();
 
-async function saveJWTToken(WP_HOST, username, password) {
-  try {
-    // Request a JWT token
-    const response = await axios.post(`${WP_HOST}/wp-json/jwt-auth/v1/token`, {
-      username,
-      password
-    });
-
-    if (response.data.token) {
-      store.set('jwt_token', response.data.token);
-      return true;
-    }
-  } catch (error) {
-    console.error('An error occurred:', error);
-  }
-}
-function setWpHeaders() {
-  wp.setHeaders('Authorization', `Bearer ${store.get('jwt_token')}`);
-}
-
-async function checkValidJWTToken() {
-  try {
-    if (!store.has('jwt_token')) {
-      return false;
-    }
-    const response = await axios.post(`${userConfig.HOST_API}/wp-json/jwt-auth/v1/token/validate`, {}, {
-      headers: {
-        Authorization: `Bearer ${store.get('jwt_token')}`
-      }
-    });
-
-    if (response.data.data.status === 403) {
-      return false;
-    }
-    return response.data.data.status === 200;
-  } catch (error) {
-    // console.error('An error occurred:', error);
-  }
-
-}
-
-
-function getOrCreateTaxonomy(taxonomy, name) {
-  return taxonomy.search(name).then(items => {
-    if (items.length > 0) {
-      // If the item exists, return its ID
-      return items[0].id;
-    } else {
-      // If the item doesn't exist, create it and return its ID
-      const slug = name.toLowerCase().replace(/ /g, '-');
-      return taxonomy.create({ name, slug }).then(item => item.id);
-    }
+  // Check if the directory exists mp4 file
+  const videoFiles = files.filter(file => {
+    const extension = path.extname(file);
+    return extension === '.mp4';
   });
-}
 
-//Get categories and tags
-async function getAllItems(type) {
-  let items = [];
-  let pageNumber = 1;
-  let areMoreItems = true;
+  if (videoFiles.length === 0) {
+    dialog.showMessageBoxSync(mainWin, {
+      message: 'Không tìm thấy video mp4 nào',
+      type: "info",
+    });
+    return { status: 'fail' };
+  }
+  // console.log('videoFiles:', videoFiles);
 
-  while (areMoreItems) {
-    const newItems = await type.perPage(100).page(pageNumber).get();
-    items = items.concat(newItems);
-    if (newItems.length < 100) {
-      areMoreItems = false;
-    } else {
-      pageNumber++;
-    }
+  //Filter Image that match video name
+  function filterImages(videoFiles, inputDir) {
+    const allImageFiles = fs.readdirSync(inputDir).filter(file => path.extname(file) === '.jpg');
+
+    const imageFiles = videoFiles.map(videoName => {
+      const videoBaseName = videoName.replace('_watermark.mp4', '');
+      return allImageFiles.find(imageFile => imageFile.startsWith(videoBaseName));
+    }).filter(Boolean); // remove undefined entries
+
+
+    const imageObjects = imageFiles.map(imageFile => {
+      const videoName = videoFiles.find(videoName => {
+        const videoBaseName = videoName.replace('_watermark.mp4', '');
+        return imageFile.startsWith(videoBaseName);
+      });
+      const pathVideo = path.join(inputDir, `${videoName}`);
+      const imagePath = path.join(inputDir, imageFile);
+      const title = videoName.replace('.mp4_watermark.mp4', '');
+      const link = '';
+      return { title, link, videoName, pathVideo, imagePath };
+    });
+
+    return imageObjects;
   }
 
-  return items;
-}
+  const postObjects = filterImages(videoFiles, inputDir);
+  const categories = store.get('categories');
+  const tags = store.get('tags');
+  return { postObjects, categories, tags };
+});
 
-async function getCategoriesAndTags() {
-  try {
-    const categories = await getAllItems(wp.categories());
-    const tags = await getAllItems(wp.tags());
-    return { categories, tags };
-  } catch (error) {
-    console.error('An error occurred:', error);
-  }
-}
 
 async function handleUploadTabClicked() {
   try {
@@ -578,66 +690,29 @@ async function handleUploadTabClicked() {
   }
 }
 
-ipcMain.handle('upload-tab-clicked', handleUploadTabClicked);
 
-
-async function createPost(title, content, categoryNames, tagNames, embed, imagePath, postViewsCount) {
+ipcMain.handle('upload-tab-clicked', async (event, args) => {
+  // Your logic here
   try {
-    // Upload the image and get the media item
-    const media = await wp.media().file(imagePath).create();
-
-    // Get the image link
-    const thumb = media.source_url;
-    // Get the image ID
-    const featured_media = media.id;
-    console.log(thumb);
-    // Get or create the categories and tags
-    const categoryIds = await Promise.all(categoryNames.map(name => getOrCreateTaxonomy(wp.categories(), name)));
-    const tagIds = await Promise.all(tagNames.map(name => getOrCreateTaxonomy(wp.tags(), name)));
-
-    // Create the post with the category and tag IDs, the meta, and the image link
-    const post = await wp.posts().create({
-      title,
-      content,
-      // status: 'draft',
-      status: 'publish',
-      categories: categoryIds,
-      tags: tagIds,
-      featured_media,
-      meta: {
-        embed: embed,
-        thumb: thumb,
-        post_views_count: postViewsCount
-      }
-    });
-
-    console.log('Đa post bai xong ID:', post.id);
-  } catch (err) {
-    console.error('An error occurred:', err);
+    // Call your handleUploadTabClicked function
+    const result = await handleUploadTabClicked();
+    return result;
+  } catch (error) {
+    console.error('An error occurred:', error);
+    return { message: "An error occurred, please try again!", status: 'fail' };
   }
-}
-let allPosts = [];
+});
 
-function getAllPosts(page = 1) {
-  return wp.posts().perPage(100).page(page).get()
-    .then(posts => {
-      allPosts = allPosts.concat(posts);
-      console.log('Fetched page: ', page);
-      if (posts.length === 100) {
-        // If we received 100 posts, there might be more posts in the next page.
-        return getAllPosts(page + 1);
-      } else {
-        // If we received less than 100 posts, we've fetched all posts.
-        return allPosts;
-      }
-    });
-}
 
-async function createPostWithValidToken(title, content, categoryNames, tagNames, embed, thumb, postViewsCount) {
-  const isValid = await checkValidJWTToken();
-  if (!isValid) {
-    await saveJWTToken(process.env.HOST_API, process.env.USERNAMEV, process.env.PASSWORD);
-  }
-  setWpHeaders();
-  await createPost(title, content, categoryNames, tagNames, embed, thumb, postViewsCount);
-}
+//Xử lý post bài lên website
+ipcMain.handle('post-to-website', async (_, data) => {
+
+
+  const post1 = data.postObjects[0];
+  console.log('post1: ', post1);
+
+  createPost(post1.title, post1.content, post1.categories_select, post1.tags_select, post1.link, post1.thumb, '22323');
+
+
+
+});

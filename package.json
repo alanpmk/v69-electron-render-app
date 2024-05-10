@@ -26,9 +26,13 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.19",
+    "dompurify": "^3.1.2",
     "electron": "^30.0.2",
     "electron-builder": "^24.13.3",
+    "electron-notify": "^0.1.0",
     "electron-reload": "^2.0.0-alpha.1",
+    "https": "^1.0.0",
+    "jsdom": "^24.0.0",
     "npm-run-all": "^4.1.5",
     "postcss": "^8.4.38",
     "postcss-cli": "^11.0.0",
