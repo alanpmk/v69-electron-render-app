@@ -1,7 +1,7 @@
 {
-  "name": "electron-ffmpeg-demo",
+  "name": "v69-ffmpeg-render",
   "version": "1.0.0",
-  "description": "this is a demo for using ffmpeg in electron",
+  "description": "Viet69 Re-render video with ffmpeg in electron",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -11,14 +11,18 @@
     "watch": "npm-run-all --parallel watch:*"
   },
   "keywords": [],
-  "author": "",
+  "author": "AlanIT",
   "license": "ISC",
   "dependencies": {
+    "axios": "^1.6.8",
+    "electron-store": "^6.0.0",
     "ffmpeg-static-electron": "^2.0.3",
     "ffprobe-static-electron": "^2.0.2",
     "fluent-ffmpeg": "^2.1.2",
+    "form-data": "^4.0.0",
     "jquery": "^3.7.1",
-    "sharp": "^0.33.3"
+    "sharp": "^0.33.3",
+    "wpapi": "^1.2.2"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.19",
