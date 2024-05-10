@@ -1,0 +1,7 @@
+{
+  "HELVID_URL": "https://helvid.com",
+  "HELVID_APIKEY": "yourApiKeyHere",
+  "WP_HOST": "https://api.example.com",
+  "USERNAME": "admin",
+  "PASSWORD": "password_test"
+}
