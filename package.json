@@ -16,8 +16,6 @@
   "dependencies": {
     "axios": "^1.6.8",
     "electron-store": "^6.0.0",
-    "ffmpeg-static-electron": "^2.0.3",
-    "ffprobe-static-electron": "^2.0.2",
     "fluent-ffmpeg": "^2.1.2",
     "form-data": "^4.0.0",
     "jquery": "^3.7.1",

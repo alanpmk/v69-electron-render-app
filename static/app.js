@@ -191,12 +191,7 @@ document.querySelector("#jsonConfigForm").addEventListener("submit", (event) => 
 document.querySelector("#upload-post").addEventListener("click", () => {
 
   ipcRenderer.invoke("upload-tab-clicked", {}).then((data) => {
-    if (data.message === 'success') {
-      console.log('Đã load token');
-    }
-    else {
-      console.log('Chưa load token');
-    }
+    console.log(data);
   });
 });
 
@@ -228,11 +223,11 @@ document.querySelector("#folder-upload-btn").addEventListener("click", () => {
               <h5 class="ui horizontal divider header truncate">
                 ${post.title}
             </h5>
-              <div class="ui segment relative">
-                        <div class="absolute right-1 top-1 cursor-pointer removePost">
-            <i class="times circle icon red"></i>
-          </div>
-          <form class="ui form" id="formPost-${index}">
+
+          <form class="ui form segment relative" id="formPost-${index}">
+            <div class="absolute right-1 top-1 cursor-pointer removePost">
+                <i class="times circle icon red"></i>
+             </div>
             <div class="fields">
               <div class="sixteen wide field">
                 <label>Tiêu đề bài viết</label>
@@ -270,10 +265,10 @@ document.querySelector("#folder-upload-btn").addEventListener("click", () => {
                 <label>Ảnh đại diện</label>
                 <img class="ui small image"
                   src="${post.imagePath}">
+                  <input type="text" value="${post.imagePath}" name="imagePath" hidden>
               </div>
             </div>
           </form>
-        </div>
             `);
             // Append the options and initialize the dropdown for this form
             $(`#formPost-${index} select[name="categories_select"]`).append(categoriesSelectOptionHTML);
@@ -310,9 +305,13 @@ document.querySelector("#PostContentsBtn").addEventListener("click",()=>{
     allFormData.push(formDataObj);
   });
 
-  console.log('Du lieu de upload la: ', allFormData);
+  $('#PostContentsBtn').addClass('loading disabled');
+  $('#folder-upload-btn').addClass('loading disabled');
   ipcRenderer.invoke("post-to-website", { postObjects: allFormData }).then((data) => {
-    console.log(data);
+    if(data && data.status === 'success'){
+      $('#PostContentsBtn').removeClass('loading disabled');
+      $('#folder-upload-btn').removeClass('loading disabled');
+    }
   });
 })
 

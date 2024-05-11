@@ -10,9 +10,9 @@ const FormData = require('form-data');
 const axios = require('axios');
 const WPAPI = require('wpapi');
 const Store = require('electron-store');
-let ffmpegPath = require('ffmpeg-static-electron').path;
+let ffmpegPath = path.join(__dirname, 'static', 'ffmpeg-static', 'ffmpeg.exe');
 ffmpegPath = ffmpegPath.replace('app.asar', 'app.asar.unpacked')
-let ffprobePath = require('ffprobe-static-electron').path;
+let ffprobePath = path.join(__dirname, 'static', 'ffprobe-static', 'ffprobe.exe');
 ffprobePath = ffprobePath.replace('app.asar', 'app.asar.unpacked')
 ffmpeg.setFfmpegPath(ffmpegPath);
 ffmpeg.setFfprobePath(ffprobePath);
@@ -25,6 +25,7 @@ const store = new Store();
 //   rejectUnauthorized: false
 // });
 // axios.defaults.httpsAgent = agent;
+
 
 // Khai báo biến mainWin để lưu trữ Window
 let mainWin;
@@ -75,22 +76,26 @@ const configPath = path.join(__dirname, "config.json");
 const destinationConfigPath = path.join(userDataPath, 'Uconfig.json');
 const dbPath = path.join(userDataPath, 'db.json');
 
-// Check if the file exists at destinationConfigPath
-if (!fs.existsSync(destinationConfigPath)) {
-  // If the file doesn't exist, copy it
-  fs.copyFile(configPath, destinationConfigPath, (err) => {
-    if (err) throw err;
-    console.log('config.json was copied to userDataPath');
-  });
-} else {
-  console.log('config.json already exists at userDataPath');
-}
+
 
 // Xử lý khi app ở trạng thái active, ví dụ click vào icon
 app.on("activate", () => {
   // Mở window mới khi không có window nào
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
+  }
+});
+
+app.on('ready', () => {
+  // Check if the file exists at destinationConfigPath
+  if (!fs.existsSync(destinationConfigPath)) {
+    // If the file doesn't exist, copy it
+    fs.copyFile(configPath, destinationConfigPath, (err) => {
+      if (err) throw err;
+      console.log('config.json was copied to userDataPath');
+    });
+  } else {
+    console.log('config.json already exists at userDataPath');
   }
 });
 
@@ -125,6 +130,10 @@ ipcMain.handle('load-config', async () => {
 const userConfig = loadConfig();
 const wp = new WPAPI({ endpoint: `${userConfig.WP_HOST}/wp-json` });
 
+function setWpHeaders(jwt_token) {
+  wp.setHeaders('Authorization', `Bearer ${jwt_token}`);
+}
+
 async function saveJWTToken(WP_HOST, username, password) {
   try {
     // Request a JWT token
@@ -132,48 +141,54 @@ async function saveJWTToken(WP_HOST, username, password) {
       username,
       password
     });
-
     if (response.data.token) {
       store.set('jwt_token', response.data.token);
-      return true;
+      return { message: 'Đã cập nhật token', status: "success" };
     }
   } catch (error) {
     console.error('An error occurred:', error);
   }
 }
-function setWpHeaders() {
-  wp.setHeaders('Authorization', `Bearer ${store.get('jwt_token')}`);
-}
 
-async function checkValidJWTToken() {
+
+async function checkValidJWTToken(WP_HOST, username, password) {
   try {
-    if (!store.has('jwt_token')) {
-      return false;
+    if (store.has('jwt_token') === false) {
+      return await saveJWTToken(WP_HOST, username, password);
     }
-    const response = await axios.post(`${userConfig.HOST_API}/wp-json/jwt-auth/v1/token/validate`, {}, {
+    const token = store.get('jwt_token');
+    const response = await axios.post(`${WP_HOST}/wp-json/jwt-auth/v1/token/validate`, {}, {
       headers: {
-        Authorization: `Bearer ${store.get('jwt_token')}`
+        Authorization: `Bearer ${token}`
       }
     });
-
-    if (response.data.data.status === 403) {
-      return false;
+    if (response.status === 200) {
+      return { message: 'Token hợp lệ', status: "success" };
     }
-    return response.data.data.status === 200;
   } catch (error) {
-    // console.error('An error occurred:', error);
+    if (error.response.status === 403) {
+      return await saveJWTToken(WP_HOST, username, password);
+    }
+    console.error('Có lỗi xảy ra trong quá trình lấy token:', error);
   }
-
 }
 
 
-function getOrCreateTaxonomy(taxonomy, name) {
-  // If the item doesn't exist, create it and return its ID
+async function getOrCreateTaxonomy(taxonomy, name) {
   const slug = name.toLowerCase().replace(/ /g, '-');
-  return taxonomy.create({ name, slug }).then(item => item.id);
-}
 
-//Get categories and tags
+  // Check if the taxonomy with the given slug already exists
+  const existingItems = await taxonomy.slug(slug);
+
+  if (existingItems.length > 0) {
+    // If the taxonomy already exists, return its ID
+    return existingItems[0].id;
+  } else {
+    // If the taxonomy doesn't exist, create it and return its ID
+    return await taxonomy.create({ name, slug }).then(item => item.id);
+  }
+}
+// Get all items of a certain type
 async function getAllItems(type) {
   let items = [];
   let pageNumber = 1;
@@ -192,53 +207,62 @@ async function getAllItems(type) {
   return items;
 }
 
+// Get categories and tags
 async function getCategoriesAndTags() {
   try {
-    const categories = await getAllItems(wp.categories());
-    const tags = await getAllItems(wp.tags());
-    return { categories, tags };
+    if (!store.has('categories') || !store.has('tags')) {
+      const categories = await getAllItems(wp.categories());
+      const tags = await getAllItems(wp.tags());
+      store.set('categories', categories);
+      store.set('tags', tags);
+      store.set('categories_total', categories.length);
+      store.set('tags_total', tags.length);
+      return { categories, tags };
+    }
+    return { categories: store.get('categories'), tags: store.get('tags') };
+
+
   } catch (error) {
-    console.error('An error occurred:', error);
+    console.error('An error occurred from getCategoriesAndTags():', error);
   }
 }
-
 
 async function createPost(title, content, categories, tags, embed, imagePath, postViewsCount) {
   try {
     // Upload the image and get the media item
-    // const media = await wp.media().file(imagePath).create();
+    const media = await wp.media().file(imagePath).create();
 
-    // // Get the image link
-    // const thumb = media.source_url;
-    // // Get the image ID
-    // const featured_media = media.id;
-    // console.log(thumb);
+    // Get the image link
+    const thumb = media.source_url;
+    // Get the image ID
+    const featured_media = media.id;
+    console.log(thumb);
 
     // Get or create the categories and tags
     const categoryIds = await Promise.all(categories.map(item => !isNaN(Number(item)) ? Number(item) : getOrCreateTaxonomy(wp.categories(), item)));
     const tagIds = await Promise.all(tags.map(item => !isNaN(Number(item)) ? Number(item) : getOrCreateTaxonomy(wp.tags(), item)));
 
-    console.log('categoryIds: ', categoryIds, ' tagIds: ', tagIds);
-    return 1;
     // Create the post with the category and tag IDs, the meta, and the image link
-    // const post = await wp.posts().create({
-    //   title,
-    //   content,
-    //   // status: 'draft',
-    //   status: 'publish',
-    //   categories: categoryIds,
-    //   tags: tagIds,
-    //   featured_media,
-    //   meta: {
-    //     embed: embed,
-    //     thumb: thumb,
-    //     post_views_count: postViewsCount
-    //   }
-    // });
+    const post = await wp.posts().create({
+      title,
+      content,
+      status: 'draft',
+      // status: 'publish',
+      categories: categoryIds,
+      tags: tagIds,
+      featured_media,
+      meta: {
+        embed: embed,
+        thumb: thumb,
+        post_views_count: postViewsCount
+      }
+    });
 
-    console.log('Đa post bai xong ID:', post.id);
+    console.log('Post bai thanh cong:', title, ' ID la:', post.id);
+    return { status: 'success', id: post.id, title: title };
   } catch (err) {
-    console.error('An error occurred:', err);
+    console.error('Post bài #%s bị lỗi: #%s', title, err.message);
+    return { status: 'fail', id: null, title: title };
   }
 }
 let allPosts = [];
@@ -261,9 +285,9 @@ function getAllPosts(page = 1) {
 async function createPostWithValidToken(title, content, categoryNames, tagNames, embed, thumb, postViewsCount) {
   const isValid = await checkValidJWTToken();
   if (!isValid) {
-    await saveJWTToken(process.env.HOST_API, process.env.USERNAMEV, process.env.PASSWORD);
+    await saveJWTToken(process.env.HOST_API, process.env.USERNAME, process.env.PASSWORD);
   }
-  setWpHeaders();
+  setWpHeaders(store.get('jwt_token'));
   await createPost(title, content, categoryNames, tagNames, embed, thumb, postViewsCount);
 }
 
@@ -503,7 +527,7 @@ ipcMain.handle("getlink", async (_, data) => {
 
   const getAllVideos = async (apikey, page, per_page) => {
     try {
-      const response = await axios.get(`${config.HELVID_URL}/api/myvideo?apikey=${apikey}&page=${page}&per_page=${per_page}`);
+      const response = await axios.get(`${userConfig.HELVID_URL}/api/myvideo?apikey=${apikey}&page=${page}&per_page=${per_page}`);
       console.log('Response:', response.data);
       return response.data;
     } catch (error) {
@@ -524,7 +548,7 @@ ipcMain.handle("getlink", async (_, data) => {
     formData.append('mycid', mycid);
 
     try {
-      const response = await axios.post(`${config.HELVID_URL}/api/upload`, formData, {
+      const response = await axios.post(`${userConfig.HELVID_URL}/api/upload`, formData, {
         headers: {
           ...formData.getHeaders(),
           ...headers
@@ -548,7 +572,7 @@ ipcMain.handle("getlink", async (_, data) => {
       //upload file lần lượt
       for (const [index, file] of videoFiles.entries()) {
         console.log('Đang upload file:', file);
-        const res = await uploadFile(path.join(inputDir, file), '17', '18', config.HELVID_APIKEY, '1617');
+        const res = await uploadFile(path.join(inputDir, file), '17', '18', userConfig.HELVID_APIKEY, '1617');
         if (res) {
           console.log('Upload thanh cong');
           console.log('Response upload:', res);
@@ -576,7 +600,7 @@ ipcMain.handle("getlink", async (_, data) => {
 
       // console.log("list ID videos la: ", dids);
       // Get all videos
-      const res = await getAllVideos(config.HELVID_APIKEY, 1, 20);
+      const res = await getAllVideos(userConfig.HELVID_APIKEY, 1, 20);
 
       if (res && res.data) {
         const videosList = res.data;
@@ -613,7 +637,8 @@ ipcMain.handle("getlink", async (_, data) => {
 ipcMain.handle('load-post-from-folder', async (_, data) => {
   const inputDir = data.folder;
   const files = await fs.promises.readdir(inputDir);
-  const config = loadConfig();
+
+  await getCategoriesAndTags();
 
   // Check if the directory exists mp4 file
   const videoFiles = files.filter(file => {
@@ -664,33 +689,15 @@ ipcMain.handle('load-post-from-folder', async (_, data) => {
 
 async function handleUploadTabClicked() {
   try {
-    if (!store.has('jwt_token')) {
-      const tokenSaved = await saveJWTToken(userConfig.WP_HOST, userConfig.USERNAME, userConfig.PASSWORD);
-      if (!tokenSaved) {
-        throw new Error("Unable to save JWT token");
-      }
-      setWpHeaders();
-    }
-
-    if (!store.has('categories') || !store.has('tags')) {
-      const { categories, tags } = await getCategoriesAndTags();
-      store.set('categories', categories);
-      store.set('tags', tags);
-    }
-
-    const message = store.has('jwt_token') ? "Đã tồn tại token" : "Đã get token";
-    const jwtToken = store.get('jwt_token');
-    const categories = store.get('categories');
-    const tags = store.get('tags');
-
-    return { message, jwtToken, status: 'success', categories, tags };
+    const res = await checkValidJWTToken(userConfig.WP_HOST, userConfig.USERNAME, userConfig.PASSWORD);
+    setWpHeaders(store.get('jwt_token'));
+    return res;
   } catch (error) {
-    console.error('An error occurred:', error);
+    console.error('Có lỗi :', error);
     return { message: "Có lỗi xảy ra, VUi lòng thử lại!", status: 'fail' };
   }
 }
-
-
+//Sự kiện click tab upload bài viết
 ipcMain.handle('upload-tab-clicked', async (event, args) => {
   // Your logic here
   try {
@@ -706,13 +713,24 @@ ipcMain.handle('upload-tab-clicked', async (event, args) => {
 
 //Xử lý post bài lên website
 ipcMain.handle('post-to-website', async (_, data) => {
+  const config = loadConfig();
+  await checkValidJWTToken(config.WP_HOST, config.USERNAME, config.PASSWORD);
+  setWpHeaders(store.get('jwt_token'));
 
+  function getRandomPostViewsCount(min = 15000, max = 46000) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+  const postObjects = data.postObjects;
 
-  const post1 = data.postObjects[0];
-  console.log('post1: ', post1);
-
-  createPost(post1.title, post1.content, post1.categories_select, post1.tags_select, post1.link, post1.thumb, '22323');
-
-
-
+  const results = await Promise.all(postObjects.map(async (post) => {
+    console.log('Dang post bai viet: ', post.title);
+    return await createPost(post.title, post.content, post.categories_select, post.tags_select, post.link, post.imagePath, getRandomPostViewsCount().toString());
+  }));
+  postCountSuccess = results.filter(result => result.status === 'success').length;
+  postCountFails = results.filter(result => result.status === 'fail').length;
+  dialog.showMessageBox(mainWin, {
+    message: `Đã đăng thành công ${postCountSuccess} bài viết, ${postCountFails} bài viết lỗi!`,
+    type: "info",
+  })
+  return { status: 'success', results };
 });

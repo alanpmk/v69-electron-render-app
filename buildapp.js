@@ -13,9 +13,8 @@ builder.build({
     },
     asar: true,
     asarUnpack: [
-      // "**/static/viet69watermark.png",
-      // "**/node_modules/ffmpeg-static-electron/**/*",
-      // "**/node_modules/ffprobe-static-electron/**/*"
+      "**/static/ffmpeg-static/ffmpeg.exe",
+      "**/static/ffprobe-static/ffprobe.exe",
     ]
   }
 });
