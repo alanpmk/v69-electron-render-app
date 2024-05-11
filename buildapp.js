@@ -6,7 +6,7 @@ builder.build({
     productName: "V69 Render Watermark",
     win: {
       target: {
-        target: "zip",
+        target: "msi",
         arch: "x64",
       },
       icon: "./static/viet69_ico_app"
@@ -15,6 +15,7 @@ builder.build({
     asarUnpack: [
       "**/static/ffmpeg-static/ffmpeg.exe",
       "**/static/ffprobe-static/ffprobe.exe",
+      "**/static/config_ex.json",
     ]
   }
 });

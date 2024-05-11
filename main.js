@@ -54,10 +54,10 @@ const createWindow = () => {
   mainWin.loadFile("./index.html");
 
   // Devtools cho debugs
-  let devTools = new BrowserWindow();
-  devTools.removeMenu();
-  mainWin.webContents.setDevToolsWebContents(devTools.webContents);
-  mainWin.webContents.openDevTools({ mode: 'detach' });
+  // let devTools = new BrowserWindow();
+  // devTools.removeMenu();
+  // mainWin.webContents.setDevToolsWebContents(devTools.webContents);
+  // mainWin.webContents.openDevTools({ mode: 'detach' });
 
 
 };
@@ -72,7 +72,7 @@ app.on("window-all-closed", () => {
 
 //load config file if not exits first time
 const userDataPath = app.getPath('userData');
-const configPath = path.join(__dirname, "config.json");
+const configPath = path.join(__dirname, 'static', "config_ex.json");
 const destinationConfigPath = path.join(userDataPath, 'Uconfig.json');
 const dbPath = path.join(userDataPath, 'db.json');
 
@@ -87,11 +87,9 @@ app.on("activate", () => {
 });
 
 app.on('ready', () => {
-  // Check if the file exists at destinationConfigPath
   if (!fs.existsSync(destinationConfigPath)) {
-    // If the file doesn't exist, copy it
-    fs.copyFile(configPath, destinationConfigPath, (err) => {
-      if (err) throw err;
+    fs.copyFileSync(configPath, destinationConfigPath, (err) => {
+      // if (err) throw err;
       console.log('config.json was copied to userDataPath');
     });
   } else {
@@ -100,8 +98,12 @@ app.on('ready', () => {
 });
 
 function loadConfig() {
+  if (!fs.existsSync(destinationConfigPath)) {
+    fs.copyFileSync(configPath, destinationConfigPath);
+    console.log('config.json was copied to userDataPath');
+  }
   const jsonConfig = JSON.parse(fs.readFileSync(destinationConfigPath, 'utf-8'));
-  return jsonConfig
+  return jsonConfig;
 }
 //Loading database from db.json
 function loadDb() {
@@ -246,8 +248,8 @@ async function createPost(title, content, categories, tags, embed, imagePath, po
     const post = await wp.posts().create({
       title,
       content,
-      status: 'draft',
-      // status: 'publish',
+      // status: 'draft',
+      status: 'publish',
       categories: categoryIds,
       tags: tagIds,
       featured_media,
@@ -295,7 +297,16 @@ async function createPostWithValidToken(title, content, categoryNames, tagNames,
 /**--------------------------------------------------------------------- */
 /**----Handle ipcMain events--------------------------------------------**/
 /**--------------------------------------------------------------------- */
-
+//Handle save config
+ipcMain.handle('save-jsonconfig', async (_, data) => {
+  console.log(data.config);
+  fs.writeFileSync(destinationConfigPath, JSON.stringify(data.config), 'utf-8');
+  dialog.showMessageBox(mainWin, {
+    message: `Lưu cấu hình thành công!`,
+    type: "info",
+  })
+  return { status: 'success' };
+});
 // Handle select folder
 ipcMain.handle("select-folder", async () => {
   const pathObj = await dialog.showOpenDialog(mainWin, {
@@ -489,6 +500,7 @@ ipcMain.handle("render", async (_, data) => {
       return { status: 'fail' };
     }
   }
+
   const res = await processFiles();
   if (res.status === 'success') {
     // shell.openPath(renderedVideosDir);
@@ -498,12 +510,14 @@ ipcMain.handle("render", async (_, data) => {
     }).then(() => {
       shell.openPath(path.join(renderedVideosDir, getFormattedDate()));
     });
+    return res;
   }
   return res;
 });
 
 // handle xử lý upload video lên helvid và getlink video
 ipcMain.handle("getlink", async (_, data) => {
+  const userConfig = loadConfig();
 
   const inputDir = data.folder;
   const files = await fs.promises.readdir(inputDir);
@@ -689,6 +703,7 @@ ipcMain.handle('load-post-from-folder', async (_, data) => {
 
 async function handleUploadTabClicked() {
   try {
+    const userConfig = loadConfig();
     const res = await checkValidJWTToken(userConfig.WP_HOST, userConfig.USERNAME, userConfig.PASSWORD);
     setWpHeaders(store.get('jwt_token'));
     return res;
@@ -713,24 +728,34 @@ ipcMain.handle('upload-tab-clicked', async (event, args) => {
 
 //Xử lý post bài lên website
 ipcMain.handle('post-to-website', async (_, data) => {
-  const config = loadConfig();
-  await checkValidJWTToken(config.WP_HOST, config.USERNAME, config.PASSWORD);
-  setWpHeaders(store.get('jwt_token'));
+  try {
 
-  function getRandomPostViewsCount(min = 15000, max = 46000) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+    const config = loadConfig();
+    await checkValidJWTToken(config.WP_HOST, config.USERNAME, config.PASSWORD);
+    setWpHeaders(store.get('jwt_token'));
+
+    function getRandomPostViewsCount(min = 15000, max = 46000) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+    const postObjects = data.postObjects;
+
+    const results = await Promise.all(postObjects.map(async (post) => {
+      console.log('Dang post bai viet: ', post.title);
+      return await createPost(post.title, post.content, post.categories_select, post.tags_select, post.link, post.imagePath, getRandomPostViewsCount().toString());
+    }));
+    postCountSuccess = results.filter(result => result.status === 'success').length;
+    postCountFails = results.filter(result => result.status === 'fail').length;
+    dialog.showMessageBox(mainWin, {
+      message: `Đã đăng thành công ${postCountSuccess} bài viết, ${postCountFails} bài viết lỗi!`,
+      type: "info",
+    })
+    return { status: 'success', results };
   }
-  const postObjects = data.postObjects;
-
-  const results = await Promise.all(postObjects.map(async (post) => {
-    console.log('Dang post bai viet: ', post.title);
-    return await createPost(post.title, post.content, post.categories_select, post.tags_select, post.link, post.imagePath, getRandomPostViewsCount().toString());
-  }));
-  postCountSuccess = results.filter(result => result.status === 'success').length;
-  postCountFails = results.filter(result => result.status === 'fail').length;
-  dialog.showMessageBox(mainWin, {
-    message: `Đã đăng thành công ${postCountSuccess} bài viết, ${postCountFails} bài viết lỗi!`,
-    type: "info",
-  })
-  return { status: 'success', results };
+  catch (error) {
+    dialog.showMessageBox(mainWin, {
+      message: `Có lỗi xảy ra, vui lòng kiểm tra cấu hình và thử lại!`,
+      type: "info",
+    })
+    return { status: 'fail' };
+  }
 });

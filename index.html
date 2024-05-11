@@ -7,13 +7,13 @@
 
 <div class="flex flex-col justify-center items-center gap-4 w-screen h-screen">
   <div class="ui top attached tabular menu">
-    <a class="item" data-tab="first">Thêm logo</a>
-    <a class="item" data-tab="second">Lấy link phát</a>
-    <a class="item active" id="upload-post" data-tab="third">Upload bài viết</a>
-    <a class="item" id="config-tab" data-tab="four"><i class="wrench icon" style="visibility: visible"></i>Cấu hình</a>
+    <a class="item active menutab" data-tab="first" id="re-render">Thêm logo</a>
+    <a class="item menutab" data-tab="second" id="get-link">Lấy link phát</a>
+    <a class="item menutab" id="upload-post" data-tab="third">Upload bài viết</a>
+    <a class="item menutab" id="config-tab" data-tab="four"><i class="wrench icon" style="visibility: visible"></i>Cấu hình</a>
   </div>
   <!-- First tab content -->
-  <div class="ui bottom attached tab segment h-full" data-tab="first">
+  <div class="ui bottom attached tab segment active h-full" data-tab="first">
     <div class="flex flex-col items-center justify-center space-y-3">
       <div class="flex flex-row gap-4 justify-start items-center">
         <div class="w-[65vw]">
@@ -28,9 +28,9 @@
       </div>
       <div class="flex flex-row gap-4 justify-start items-center">
         <div class="flex flex-row items-center w-[65vw]">
-          <div class="ui fluid file action input">
+          <div class="ui fluid file action input" id="actionfileinputwrap">
             <input id="actionfileinput" type="file" />
-            <label for="actionfileinput" class="ui blue button w-[125px]">
+            <label for="actionfileinput" class="ui blue button w-[125px]" id="actionfileinputlabel">
               <i class="wizard icon"></i>
               Chọn logo
             </label>
@@ -102,7 +102,7 @@
   </div>
 
   <!--3nd tab content  -->
-  <div class="ui bottom attached tab segment active h-full" data-tab="third">
+  <div class="ui bottom attached tab segment h-full" data-tab="third">
     <div class="w-[80vw] mx-auto flex flex-col items-center">
       <div class="flex justify-between items-center">
 
@@ -199,9 +199,10 @@
         <div class="ui label w-40 blue">Tên đăng nhập: </div>
         <input type="text" name="USERNAME" placeholder="Tên đăng nhập web" />
       </div>
-      <div class="ui labeled input">
+      <div class="ui labeled input relative">
         <div class="ui label w-40 blue">Mật khẩu: </div>
-        <input type="text" name="PASSWORD" placeholder="Mật khẩu" />
+        <input type="password" name="PASSWORD" placeholder="Mật khẩu" />
+        <i class="eye icon absolute right-0 top-3.5 text-slate-700" onclick="togglePasswordVisibility(this)"></i>
       </div>
       <button class="ui button green mx-auto" id="jsonConfigSubmitBtn">Lưu thông tin</button>
     </form>
@@ -209,10 +210,16 @@
 </div>
 <!-- You MUST include jQuery 3.4+ before Fomantic -->
 <!-- <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> -->
+<script src="static/app.js"></script>
 <script>
   window.$ = window.jQuery = require("jquery");
+function togglePasswordVisibility(element) {
+    var $input = $(element).prev();
+    var type = $input.attr('type') === 'text' ? 'password' : 'text';
+    $input.attr('type', type);
+    $(element).toggleClass('slash');
+}
 </script>
-<script src="static/app.js"></script>
 <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.3/dist/semantic.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.3/dist/semantic.min.js"></script>
 <style>

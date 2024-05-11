@@ -22,6 +22,12 @@ document.onreadystatechange = (event) => {
 /*---RENDER TAB HANDLE
 /*----------------------------*/
 
+//Click vào render tab
+document.querySelector("#re-render").addEventListener("click", () => {
+  // $('#progressDiv').empty();
+});
+
+
 // Chọn thư mục chứa video cần thêm logo
 document.querySelector("#folder-btn").addEventListener("click", () => {
   $('#progressDiv').empty();
@@ -64,11 +70,23 @@ document.getElementById('actionfileinput').addEventListener('change', function (
   logoPath = file.path;
 });
 
+
+// Function to disable buttons
+function disableButtons() {
+  $("#action-btn,#actionfileinputlabel,#folder-btn,#actionfileinputwrap").addClass("loading disabled");
+  $('.menutab:not(.active)').addClass('disabled');
+}
+
+// Function to enable buttons
+function enableButtons() {
+  $("#action-btn,#actionfileinputlabel,#folder-btn,#actionfileinputwrap").removeClass("loading disabled");
+  $('.menutab:not(.active)').removeClass('disabled');
+}
+
 //Click xử lý render video
 document.querySelector("#action-btn").addEventListener("click", () => {
   const folder = document.querySelector("#actionfolderinput").value;
   const logo = logoPath;
-  console.log('folder', folder, 'logo', logo);
   if (!folder) {
     alert('Chưa chọn thư mục chứa video');
     return;
@@ -78,19 +96,19 @@ document.querySelector("#action-btn").addEventListener("click", () => {
     return;
   }
   $('#progressDiv').empty();
-  $("#action-btn").addClass("loading disabled");
+  disableButtons();
+
   ipcRenderer.invoke("render", { folder: folder, logo: logo }).then((data) => {
     try {
       if (data && data.status === "success") {
         console.log('Đã xử lý xong tất cả video');
-        $("#action-btn").removeClass("loading disabled");
-      }
-      else {
+      } else {
         console.log('Có lỗi xảy ra');
-        $("#action-btn").removeClass("loading disabled");
       }
     } catch (error) {
       console.log('Có lỗi xảy ra', error);
+    } finally {
+      enableButtons();
     }
   });
 });
@@ -99,6 +117,11 @@ document.querySelector("#action-btn").addEventListener("click", () => {
 /*----------------------------*/
 /*---GETLINK TAB HANDLE
 /*----------------------------*/
+//Click vào Lấy link phát
+document.querySelector("#get-link").addEventListener("click", () => {
+  $('#progressGetlinkDiv').empty();
+});
+
 
 // Handle select get link folder button click
 document.querySelector("#folder-getlink-btn").addEventListener("click", () => {
@@ -119,7 +142,6 @@ document.querySelector("#folder-getlink-btn").addEventListener("click", () => {
 //Xử lý sự kiện click nút getlink
 document.querySelector("#action-getlink-btn").addEventListener("click", () => {
   const folder = document.querySelector("#actionFolderGetlinkInput").value;
-  console.log('f', folder);
   if (!folder) {
     alert('Chưa chọn thư mục chứa video');
     return;
@@ -148,7 +170,6 @@ document.querySelector("#action-getlink-btn").addEventListener("click", () => {
 /*----------------------------*/
 /*---CONFIG TAB HANDLE
 /*----------------------------*/
-
 //Click vào config tab
 document.querySelector("#config-tab").addEventListener("click", () => {
   ipcRenderer.invoke("load-config", {}).then((data) => {
@@ -166,7 +187,6 @@ document.querySelector("#config-tab").addEventListener("click", () => {
 document.querySelector("#jsonConfigForm").addEventListener("submit", (event) => {
   // Prevent the form from submitting normally
   event.preventDefault();
-  console.log('submit config form click');
   const formInputs = document.querySelectorAll("#jsonConfigForm input");
   let inputValues = {};
 
@@ -175,28 +195,33 @@ document.querySelector("#jsonConfigForm").addEventListener("submit", (event) => 
   });
 
   console.log(inputValues);
-
   if (!inputValues) {
     alert('Chưa nhập json config');
     return;
   }
-  ipcRenderer.invoke("save-jsonconfig", { jsonconfig: inputValues }).then((data) => { });
+  ipcRenderer.invoke("save-jsonconfig", { config: inputValues }).then((data) => {
+    if (data.status === 'success') {
+      console.log('Lưu config thành công');
+    }
+  });
 });
 
 /*----------------------------*/
 /*---UPLOAD TAB HANDLE
 /*----------------------------*/
 
+
 //Click vào upload bài viết tab - check và load token
 document.querySelector("#upload-post").addEventListener("click", () => {
 
   ipcRenderer.invoke("upload-tab-clicked", {}).then((data) => {
-    console.log(data);
+    console.log(data.message);
   });
 });
 
 // Click nút chọn folder chứa video và ảnh đã render
 document.querySelector("#folder-upload-btn").addEventListener("click", () => {
+  $('#postContentsWrapper').empty();
   ipcRenderer
     .invoke("select-folder")
     .then((data) => {
@@ -204,7 +229,6 @@ document.querySelector("#folder-upload-btn").addEventListener("click", () => {
         document.querySelector("#actionFolderUpLoadInput").value = data.filePaths[0];
         ipcRenderer.invoke("load-post-from-folder", { folder: data.filePaths[0] }).then((data) => {
           postObjects = data.postObjects;
-          console.log(postObjects);
 
           let categoriesSelectOptionHTML = `<option value="">Chọn danh mục nội dung cho video</option>`;
           data.categories.forEach(element => {
@@ -286,9 +310,20 @@ document.querySelector("#folder-upload-btn").addEventListener("click", () => {
     });
 });
 
+// Function to disable buttons
+function disableButtonsPost() {
+  $("#folder-upload-btn,#PostContentsBtn").addClass("loading disabled");
+  $('.menutab:not(.active)').addClass('disabled');
+}
+
+// Function to enable buttons
+function enableButtonsPost() {
+  $("#folder-upload-btn,#PostContentsBtn").removeClass("loading disabled");
+  $('.menutab:not(.active)').removeClass('disabled');
+}
+
 //CLick nút Đăng bài viết
-document.querySelector("#PostContentsBtn").addEventListener("click",()=>{
-  console.log('dang bai viet');
+document.querySelector("#PostContentsBtn").addEventListener("click", () => {
   var allFormData = [];
 
   $('[id^=formPost-]').each(function () {
@@ -305,13 +340,21 @@ document.querySelector("#PostContentsBtn").addEventListener("click",()=>{
     allFormData.push(formDataObj);
   });
 
-  $('#PostContentsBtn').addClass('loading disabled');
-  $('#folder-upload-btn').addClass('loading disabled');
+  disableButtonsPost();
   ipcRenderer.invoke("post-to-website", { postObjects: allFormData }).then((data) => {
-    if(data && data.status === 'success'){
-      $('#PostContentsBtn').removeClass('loading disabled');
-      $('#folder-upload-btn').removeClass('loading disabled');
+    try {
+      if (data && data.status === 'success') {
+        console.log('Đã đăng bài viết thành công');
+      } else {
+        console.log('Có lỗi xảy ra');
+      }
     }
+    catch (error) {
+      console.log('Có lỗi xảy ra', error);
+    } finally {
+      enableButtonsPost();
+    }
+
   });
 })
 
@@ -321,7 +364,6 @@ document.querySelector("#PostContentsBtn").addEventListener("click",()=>{
 
 //ipcRender from main.js
 ipcRenderer.on("render-progressbar", (event, data) => {
-  console.log(data.videoFiles);
   const videoFiles = data.videoFiles;
   if (Array.isArray(videoFiles)) {
     for (let i = 0; i < videoFiles.length; i++) {
@@ -348,7 +390,6 @@ ipcRenderer.on("got-progress", (event, data) => {
 });
 
 ipcRenderer.on("getlink-progressbar", (event, data) => {
-  console.log(data.videoFiles);
   const length = data.length;
   $('#progressGetlinkDiv').append(`
     <div class="ui indicating progress" data-value="0" data-total="${length}" id="progressGetlink">
@@ -376,4 +417,16 @@ ipcRenderer.on("getlink-progressbar", (event, data) => {
 ipcRenderer.on("got-getlink-progress", (event, data) => {
   $('#progressGetlink').progress('increment');
   $(`#video-${data.index} p`).html(`<i class="check green icon"></i>`);
+});
+
+ipcRenderer.on("remove-loading-css", (event, data) => {
+  data.elemlist.forEach(elementId => {
+    $(`#${elementId}`).removeClass('loading disabled');
+  });
+});
+
+ipcRenderer.on("clearDiv", (event, data) => {
+  data.elemlist.forEach(elementId => {
+    $(`#${elementId}`).empty()
+  });
 });
