@@ -54,10 +54,10 @@ const createWindow = () => {
   mainWin.loadFile("./index.html");
 
   // Devtools cho debugs
-  // let devTools = new BrowserWindow();
-  // devTools.removeMenu();
-  // mainWin.webContents.setDevToolsWebContents(devTools.webContents);
-  // mainWin.webContents.openDevTools({ mode: 'detach' });
+  let devTools = new BrowserWindow();
+  devTools.removeMenu();
+  mainWin.webContents.setDevToolsWebContents(devTools.webContents);
+  mainWin.webContents.openDevTools({ mode: 'detach' });
 
 
 };
@@ -212,16 +212,16 @@ async function getAllItems(type) {
 // Get categories and tags
 async function getCategoriesAndTags() {
   try {
-    if (!store.has('categories') || !store.has('tags')) {
-      const categories = await getAllItems(wp.categories());
-      const tags = await getAllItems(wp.tags());
-      store.set('categories', categories);
-      store.set('tags', tags);
-      store.set('categories_total', categories.length);
-      store.set('tags_total', tags.length);
-      return { categories, tags };
-    }
-    return { categories: store.get('categories'), tags: store.get('tags') };
+    // if (!store.has('categories') || !store.has('tags')) {
+    // }
+    const categories = await getAllItems(wp.categories());
+    const tags = await getAllItems(wp.tags());
+    // store.set('categories', categories);
+    // store.set('tags', tags);
+    // store.set('categories_total', categories.length);
+    // store.set('tags_total', tags.length);
+    return { categories, tags };
+    // return { categories: store.get('categories'), tags: store.get('tags') };
 
 
   } catch (error) {
@@ -652,7 +652,6 @@ ipcMain.handle('load-post-from-folder', async (_, data) => {
   const inputDir = data.folder;
   const files = await fs.promises.readdir(inputDir);
 
-  await getCategoriesAndTags();
 
   // Check if the directory exists mp4 file
   const videoFiles = files.filter(file => {
@@ -695,8 +694,11 @@ ipcMain.handle('load-post-from-folder', async (_, data) => {
   }
 
   const postObjects = filterImages(videoFiles, inputDir);
-  const categories = store.get('categories');
-  const tags = store.get('tags');
+  mainWin.webContents.send("disableButtonsPost", { status: 'success' });
+  const { categories, tags } = await getCategoriesAndTags();
+  // const categories = store.get('categories');
+  // const tags = store.get('tags');
+  mainWin.webContents.send("enableButtonsPost", { status: 'success' });
   return { postObjects, categories, tags };
 });
 

@@ -419,6 +419,14 @@ ipcRenderer.on("got-getlink-progress", (event, data) => {
   $(`#video-${data.index} p`).html(`<i class="check green icon"></i>`);
 });
 
+ipcRenderer.on("disableButtonsPost", (event, data) => {
+  disableButtonsPost();
+});
+ipcRenderer.on("enableButtonsPost", (event, data) => {
+  enableButtonsPost();
+});
+
+
 ipcRenderer.on("remove-loading-css", (event, data) => {
   data.elemlist.forEach(elementId => {
     $(`#${elementId}`).removeClass('loading disabled');
