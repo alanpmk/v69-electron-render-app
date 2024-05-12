@@ -344,12 +344,17 @@ ipcMain.handle("render", async (_, data) => {
       const outputDir = path.join(renderedVideosDir, getFormattedDate());
       fs.mkdirSync(outputDir, { recursive: true });
 
+      // Calculate watermark width as 25% of video width
+      const watermarkWidth = (width > 600) ? Math.round(width * 0.30) : 250;
+
       // Create ffmpeg command
       const command = ffmpeg(path.join(originVideosDir, vidname))
         .input(watermarkPath) // Add watermark image as input
         .complexFilter([
+          // Scale watermark calculated automatically from video width, height is calculated automatically
+          `[1:v]scale=${watermarkWidth}:-1[watermark]`,
           // Overlay watermark at bottom right
-          '[0:v][1:v]overlay=W-w-10:H-h-10'
+          '[0:v][watermark]overlay=W-w-10:H-h-10'
         ])
         .output(path.join(outputDir, vidname + '_watermark.mp4'))
         .on('progress', (progress) => {
