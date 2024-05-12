@@ -54,10 +54,10 @@ const createWindow = () => {
   mainWin.loadFile("./index.html");
 
   // Devtools cho debugs
-  let devTools = new BrowserWindow();
-  devTools.removeMenu();
-  mainWin.webContents.setDevToolsWebContents(devTools.webContents);
-  mainWin.webContents.openDevTools({ mode: 'detach' });
+  // let devTools = new BrowserWindow();
+  // devTools.removeMenu();
+  // mainWin.webContents.setDevToolsWebContents(devTools.webContents);
+  // mainWin.webContents.openDevTools({ mode: 'detach' });
 
 
 };
@@ -345,8 +345,18 @@ ipcMain.handle("render", async (_, data) => {
       fs.mkdirSync(outputDir, { recursive: true });
 
       // Calculate watermark width as 25% of video width
-      const watermarkWidth = (width > 600) ? Math.round(width * 0.30) : 250;
+      let watermarkWidth = 200;
 
+      if (typeof width === 'number' && !isNaN(width)) {
+        watermarkWidth = Math.round(width * 0.30);
+        if (width < 600) {
+          const lessThan600 = Math.round(width * 0.45);
+          watermarkWidth = lessThan600;
+        }
+      } else {
+        console.error('Width is not a number');
+      }
+      console.log('Watermark width:', watermarkWidth);
       // Create ffmpeg command
       const command = ffmpeg(path.join(originVideosDir, vidname))
         .input(watermarkPath) // Add watermark image as input
@@ -654,7 +664,18 @@ ipcMain.handle("getlink", async (_, data) => {
 
 //Xử lý lấy thông tin video và ảnh từ folder load lên nội dung bài viết
 ipcMain.handle('load-post-from-folder', async (_, data) => {
+
   const inputDir = data.folder;
+  store.set('folderUploadPost', inputDir);
+  // Check if the directory exists
+  if (!fs.existsSync(inputDir)) {
+    dialog.showMessageBoxSync(mainWin, {
+      message: 'Không tìm thấy thư mục nào!',
+      type: "info",
+    });
+    return { status: 'fail' };
+  }
+
   const files = await fs.promises.readdir(inputDir);
 
 
@@ -690,11 +711,21 @@ ipcMain.handle('load-post-from-folder', async (_, data) => {
       });
       const pathVideo = path.join(inputDir, `${videoName}`);
       const imagePath = path.join(inputDir, imageFile);
-      const title = videoName.replace('.mp4_watermark.mp4', '');
+      const title = videoName.replace(/(\.\w+)_watermark\.mp4$/, '');
       const link = '';
       return { title, link, videoName, pathVideo, imagePath };
     });
-
+    if (store.has('excelData')) {
+      const excelData = store.get('excelData');
+      imageObjects.forEach((item) => {
+        const videoName = item.videoName.replace(/(\.\w+)_watermark\.mp4$/, '');
+        console.log('videoName:', videoName);
+        const videoData = excelData.find(data => data['Video name'] === videoName);
+        if (videoData) {
+          item.link = videoData["Direct link"];
+        }
+      });
+    };
     return imageObjects;
   }
 
@@ -745,9 +776,8 @@ ipcMain.handle('post-to-website', async (_, data) => {
       return Math.floor(Math.random() * (max - min + 1)) + min;
     }
     const postObjects = data.postObjects;
-
     const results = await Promise.all(postObjects.map(async (post) => {
-      console.log('Dang post bai viet: ', post.title);
+      post.link = `<iframe width="100%" height="100%" src="${post.link}" frameborder="0" allowfullscreen></iframe>`
       return await createPost(post.title, post.content, post.categories_select, post.tags_select, post.link, post.imagePath, getRandomPostViewsCount().toString());
     }));
     postCountSuccess = results.filter(result => result.status === 'success').length;
@@ -765,4 +795,39 @@ ipcMain.handle('post-to-website', async (_, data) => {
     })
     return { status: 'fail' };
   }
+});
+
+
+//Xử lý load links từ file excel
+ipcMain.handle('load-links-from-excel', async (_, data) => {
+  const inputExcelFile = data.path;
+
+  const excelData = await new Promise((resolve, reject) => {
+    const excelData = [];
+    const XLSX = require('xlsx');
+    try {
+      const workbook = XLSX.readFile(inputExcelFile);
+      const sheet_name_list = workbook.SheetNames;
+      sheet_name_list.forEach(sheetName => {
+        const worksheet = workbook.Sheets[sheetName];
+        const sheetData = XLSX.utils.sheet_to_json(worksheet, { raw: true });
+        if (sheetData.length === 0) {
+          reject(new Error('Excel file is empty'));
+        }
+        excelData.push(...sheetData);
+      });
+      resolve(excelData);
+    } catch (error) {
+      reject(error);
+    }
+  }).catch(error => {
+    return { status: 'fail', message: 'Có lỗi trong quá trình đọc file excel: ' + error.message };
+  });
+  //remove string _watermark from "Video Name" column
+  excelData.forEach((item) => {
+    item['Video name'] = item['Video name'].replace('_watermark', '');
+  });
+  store.set('excelData', excelData);
+
+  return { status: 'success', excelData, message: 'Đọc file excel thành công!' };
 });
