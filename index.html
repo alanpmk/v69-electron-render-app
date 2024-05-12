@@ -10,7 +10,8 @@
     <a class="item active menutab" data-tab="first" id="re-render">Thêm logo</a>
     <a class="item menutab" data-tab="second" id="get-link">Lấy link phát</a>
     <a class="item menutab" id="upload-post" data-tab="third">Upload bài viết</a>
-    <a class="item menutab" id="config-tab" data-tab="four"><i class="wrench icon" style="visibility: visible"></i>Cấu hình</a>
+    <a class="item menutab" id="config-tab" data-tab="four"><i class="wrench icon" style="visibility: visible"></i>Cấu
+      hình</a>
   </div>
   <!-- First tab content -->
   <div class="ui bottom attached tab segment active h-full" data-tab="first">
@@ -104,25 +105,32 @@
   <!--3nd tab content  -->
   <div class="ui bottom attached tab segment h-full" data-tab="third">
     <div class="w-[80vw] mx-auto flex flex-col items-center">
-      <div class="flex justify-between items-center">
-
-        <button class="ui whatsapp button" style="padding-left: 0.5em;padding-right: 0.5em;">
+      <div class="flex justify-between items-center space-x-1">
+        <input type="file" id="upload-excel-inp" class="ui invisible file input" accept=".xls, .xlsx">
+        <label for="upload-excel-inp" class="ui green icon button"
+          data-content="Tải file Exels có danh sách link lên để xử lý thêm link hàng loạt">
+          <i class="cloud upload alternate icon"></i>
+          Tải file links
+        </label>
+        <!-- <button class="ui whatsapp button disabled" style="padding-left: 0.5em;padding-right: 0.5em;"
+          data-content="Lấy thông tin từ tab link phát để xử lý, Chỉ hoạt động khi bạn tải link thành công từ tab 'Lấy link phát'">
           Lấy dữ liệu từ DB
-        </button>
+        </button> -->
         <div class="w-[60vw] flex-1">
           <div class="ui fluid action input">
-            <input id="actionFolderUpLoadInput" type="text" placeholder="Hoặc chọn thư mục video đã thêm logo..." />
-            <label for="actionFolderGetlinkInput" id="folder-upload-btn"
-              class="ui blue button w-[125px] justify-center">
+            <input id="actionFolderUpLoadInput" type="text" placeholder="Chọn thư mục video đã thêm logo..." />
+            <label for="actionFolderGetlinkInput" id="folder-upload-btn" class="ui blue button w-[125px] justify-center"
+              data-content="Chọn thư mục có videos + ảnh đại diện vừa được thêm logo, hệ thống sẽ trích xuất thông tin cần thiết thành bài viết.">
               <i class="folder open icon"></i>
               Chọn
             </label>
           </div>
         </div>
-      </div>
 
+      </div>
+      <span id="excel-link-path" class=" truncate">Đã nhập thông tin link từ file:</span>
       <!-- Post content -->
-      <div class="w-full ui segment h-[70vh] overflow-y-scroll mt-2 p-2" id="postContentsWrapper">
+      <div class="w-full ui segment h-[70vh] overflow-y-scroll p-2" id="postContentsWrapper" style="margin-top:0px">
         <!-- <div class="ui segment relative">
           <div class="absolute right-1 top-1 cursor-pointer removePost">
             <i class="times circle icon red"></i>
@@ -174,7 +182,8 @@
         </div> -->
 
       </div>
-      <button class="ui teal button" id="PostContentsBtn">
+      <button class="ui teal button" id="PostContentsBtn"
+        data-content="Đăng bài viết với các thông tin đầy đủ lên website.">
         ĐĂNG BÀI VIẾT
       </button>
     </div>
@@ -213,12 +222,12 @@
 <script src="static/app.js"></script>
 <script>
   window.$ = window.jQuery = require("jquery");
-function togglePasswordVisibility(element) {
+  function togglePasswordVisibility(element) {
     var $input = $(element).prev();
     var type = $input.attr('type') === 'text' ? 'password' : 'text';
     $input.attr('type', type);
     $(element).toggleClass('slash');
-}
+  }
 </script>
 <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.3/dist/semantic.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.3/dist/semantic.min.js"></script>

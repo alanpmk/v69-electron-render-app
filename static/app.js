@@ -1,7 +1,9 @@
 const { ipcRenderer } = require("electron");
+const { type } = require("jquery");
 window.$ = window.jQuery = require('jquery');
 
 let logoPath = '';
+let PostFolderPath = '';
 document.onreadystatechange = (event) => {
   $('.menu .item').tab()
   $('.ui.dropdown')
@@ -11,6 +13,14 @@ document.onreadystatechange = (event) => {
   $(document).on('click', '.removePost', function () {
     $(this).closest('.ui.segment').remove();
   });
+  $('.button')
+    .popup({
+      delay: {
+        show: 250,
+        hide: 70
+      }
+    })
+    ;
 };
 
 /*---------------------------------------*/
@@ -37,9 +47,11 @@ document.querySelector("#folder-btn").addEventListener("click", () => {
       if (!data.canceled) {
         document.querySelector("#actionfolderinput").value = data.filePaths[0];
       }
+      const excelValue = document.querySelector("#upload-excel-inpt").value;
+      console.log(excelValue);
     })
     .catch((err) => {
-      console.log(err)
+      console.log('Error uploading excel file', err);
     });
 });
 
@@ -209,41 +221,25 @@ document.querySelector("#jsonConfigForm").addEventListener("submit", (event) => 
 /*----------------------------*/
 /*---UPLOAD TAB HANDLE
 /*----------------------------*/
-
-
-//Click vào upload bài viết tab - check và load token
-document.querySelector("#upload-post").addEventListener("click", () => {
-
-  ipcRenderer.invoke("upload-tab-clicked", {}).then((data) => {
-    console.log(data.message);
-  });
-});
-
-// Click nút chọn folder chứa video và ảnh đã render
-document.querySelector("#folder-upload-btn").addEventListener("click", () => {
-  $('#postContentsWrapper').empty();
-  ipcRenderer
-    .invoke("select-folder")
-    .then((data) => {
-      if (!data.canceled) {
-        document.querySelector("#actionFolderUpLoadInput").value = data.filePaths[0];
-        ipcRenderer.invoke("load-post-from-folder", { folder: data.filePaths[0] }).then((data) => {
-          postObjects = data.postObjects;
-
-          let categoriesSelectOptionHTML = `<option value="">Chọn danh mục nội dung cho video</option>`;
-          data.categories.forEach(element => {
-            let optionsHTML = `<option value="${element.id}">${element.name}</option>`;
-            categoriesSelectOptionHTML += optionsHTML;
-          });
-          let tagsSelectOptionHTML = `<option value="">Chọn tag nội dung cho video</option>`;
-          data.tags.forEach(element => {
-            let optionsHTML = `<option value="${element.id}">${element.name}</option>`;
-            tagsSelectOptionHTML += optionsHTML;
-          });
-          $('#postContentsWrapper').empty();
-          $('#postContentsWrapper').append(`<h5 style="margin-bottom:0px">Có ${postObjects.length} video được tìm thấy!</h5>`);
-          postObjects.forEach((post, index) => {
-            $('#postContentsWrapper').append(`
+//function invoke load-post-from-folder
+function invokeLoadPostFromFolder(folderPath) {
+  ipcRenderer.invoke("load-post-from-folder", { folder: folderPath }).then((data) => {
+    postObjects = data.postObjects;
+    console.log(postObjects);
+    let categoriesSelectOptionHTML = `<option value="">Chọn danh mục nội dung cho video</option>`;
+    data.categories.forEach(element => {
+      let optionsHTML = `<option value="${element.id}">${element.name}</option>`;
+      categoriesSelectOptionHTML += optionsHTML;
+    });
+    let tagsSelectOptionHTML = `<option value="">Chọn tag nội dung cho video</option>`;
+    data.tags.forEach(element => {
+      let optionsHTML = `<option value="${element.id}">${element.name}</option>`;
+      tagsSelectOptionHTML += optionsHTML;
+    });
+    $('#postContentsWrapper').empty();
+    $('#postContentsWrapper').append(`<h5 style="margin-bottom:0px">Có ${postObjects.length} video được tìm thấy!</h5>`);
+    postObjects.forEach((post, index) => {
+      $('#postContentsWrapper').append(`
               <h5 class="ui horizontal divider header truncate">
                 ${post.title}
             </h5>
@@ -267,7 +263,7 @@ document.querySelector("#folder-upload-btn").addEventListener("click", () => {
             <div class="fields">
               <div class="sixteen wide field">
                 <label>Link embed video</label>
-                <input type="text" placeholder="Link embed video lấy từ web lấy link.." name="link">
+                <input type="text" placeholder="Link embed video lấy từ web lấy link.." name="link" value="${post.link}">
               </div>
             </div>
             <div class="fields">
@@ -294,15 +290,35 @@ document.querySelector("#folder-upload-btn").addEventListener("click", () => {
             </div>
           </form>
             `);
-            // Append the options and initialize the dropdown for this form
-            $(`#formPost-${index} select[name="categories_select"]`).append(categoriesSelectOptionHTML);
-            $(`#formPost-${index} select[name="tags_select"]`).append(tagsSelectOptionHTML);
-            $(`#formPost-${index} select[name="tags_select"]`).dropdown('set selected', ['194', '243']);
-            $(`#formPost-${index} .ui.dropdown`).dropdown({ allowAdditions: true });
-            $(`#formPost-${index} .ui.dropdown`).dropdown('refresh');
-          });
+      // Append the options and initialize the dropdown for this form
+      $(`#formPost-${index} select[name="categories_select"]`).append(categoriesSelectOptionHTML);
+      $(`#formPost-${index} select[name="tags_select"]`).append(tagsSelectOptionHTML);
+      $(`#formPost-${index} select[name="tags_select"]`).dropdown('set selected', ['194', '243']);
+      $(`#formPost-${index} .ui.dropdown`).dropdown({ allowAdditions: true });
+      $(`#formPost-${index} .ui.dropdown`).dropdown('refresh');
+    });
 
-        });
+  });
+}
+
+//Click vào upload bài viết tab - check và load token
+document.querySelector("#upload-post").addEventListener("click", () => {
+
+  ipcRenderer.invoke("upload-tab-clicked", {}).then((data) => {
+    console.log(data.message);
+  });
+});
+
+// Click nút chọn folder chứa video và ảnh đã render
+document.querySelector("#folder-upload-btn").addEventListener("click", () => {
+  $('#postContentsWrapper').empty();
+  ipcRenderer
+    .invoke("select-folder")
+    .then((data) => {
+      if (!data.canceled) {
+        document.querySelector("#actionFolderUpLoadInput").value = data.filePaths[0];
+        PostFolderPath = data.filePaths[0];
+        invokeLoadPostFromFolder(PostFolderPath);
       }
     })
     .catch((err) => {
@@ -358,11 +374,28 @@ document.querySelector("#PostContentsBtn").addEventListener("click", () => {
   });
 })
 
+//Click vào nút  upload file excel chứa thông tin links
+document.querySelector("#upload-excel-inp").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  ipcRenderer
+  .invoke("load-links-from-excel", { name: file.name, path: file.path })
+  .then((data) => {
+    if (data.status === 'success') {
+        $('#excel-link-path').text('Đã nhập thông tin link từ file: ' + file.name);
+        invokeLoadPostFromFolder(PostFolderPath);
+        console.log('Đã upload file excel thành công');
+      }
+
+    })
+    .catch((err) => {
+      console.log('có lỗi trong quá trình upload file excel', err)
+    });
+});
 /*---------------------------------------*/
 /* HANDLE [ipcRenderer.on] EVENTS from main.js
 /*---------------------------------------*/
 
-//ipcRender from main.js
+//ipcRender render progressbar
 ipcRenderer.on("render-progressbar", (event, data) => {
   const videoFiles = data.videoFiles;
   if (Array.isArray(videoFiles)) {
@@ -379,6 +412,8 @@ ipcRenderer.on("render-progressbar", (event, data) => {
   }
 
 });
+
+//ipcRender got progress
 ipcRenderer.on("got-progress", (event, data) => {
   $('#progress-' + data.index).progress({
     percent: data.percent.toFixed(0),
@@ -388,7 +423,7 @@ ipcRenderer.on("got-progress", (event, data) => {
     }
   });
 });
-
+//ipcRender getlink-progressbar
 ipcRenderer.on("getlink-progressbar", (event, data) => {
   const length = data.length;
   $('#progressGetlinkDiv').append(`
@@ -422,10 +457,10 @@ ipcRenderer.on("got-getlink-progress", (event, data) => {
 ipcRenderer.on("disableButtonsPost", (event, data) => {
   disableButtonsPost();
 });
+
 ipcRenderer.on("enableButtonsPost", (event, data) => {
   enableButtonsPost();
 });
-
 
 ipcRenderer.on("remove-loading-css", (event, data) => {
   data.elemlist.forEach(elementId => {
