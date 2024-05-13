@@ -10,6 +10,7 @@ const FormData = require('form-data');
 const axios = require('axios');
 const WPAPI = require('wpapi');
 const Store = require('electron-store');
+const { autoUpdater, AppUpdater } = require("electron-updater")
 let ffmpegPath = path.join(__dirname, 'static', 'ffmpeg-static', 'ffmpeg.exe');
 ffmpegPath = ffmpegPath.replace('app.asar', 'app.asar.unpacked')
 let ffprobePath = path.join(__dirname, 'static', 'ffprobe-static', 'ffprobe.exe');
@@ -26,6 +27,9 @@ const store = new Store();
 // });
 // axios.defaults.httpsAgent = agent;
 
+//Khai báo Updates
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
 
 // Khai báo biến mainWin để lưu trữ Window
 let mainWin;
@@ -67,6 +71,8 @@ app.whenReady().then(createWindow);
 
 // Xử lý sau khi Window được đóng
 app.on("window-all-closed", () => {
+  // Nullify mainWin when all windows are closed
+  mainWin = null;
   app.quit();
 });
 
@@ -87,6 +93,7 @@ app.on("activate", () => {
 });
 
 app.on('ready', () => {
+  autoUpdater.checkForUpdatesAndNotify();
   if (!fs.existsSync(destinationConfigPath)) {
     fs.copyFileSync(configPath, destinationConfigPath, (err) => {
       // if (err) throw err;
@@ -95,7 +102,43 @@ app.on('ready', () => {
   } else {
     console.log('config.json already exists at userDataPath');
   }
+  //Handle auto update new version
+  autoUpdater.on('checking-for-update', () => {
+    console.log('Checking for update');
+    mainWin.webContents.send('checking_for_update');
+  });
 });
+
+autoUpdater.on('update-available', (info) => {
+  mainWin.webContents.send('update-available', { info });
+});
+
+autoUpdater.on('update-not-available', (info) => {
+  console.log('Update not available.');
+  mainWin.webContents.send('update-not-available', { info });
+});
+
+autoUpdater.on('error', (err) => {
+  console.log('Error in auto-updater. ' + err);
+  mainWin.webContents.send('update-error', { err });
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+  let log_message = "Download speed: " + progressObj.bytesPerSecond;
+  log_message = log_message + ' - Downloaded ' + progressObj.percent + '%';
+  log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')';
+  console.log(log_message);
+  mainWin.webContents.send('download-progress', progressObj);
+});
+
+autoUpdater.on('update-downloaded', () => {
+  mainWin.webContents.send('update_downloaded');
+});
+
+ipcMain.handle('restart_app', () => {
+  autoUpdater.quitAndInstall();
+});
+
 
 function loadConfig() {
   if (!fs.existsSync(destinationConfigPath)) {

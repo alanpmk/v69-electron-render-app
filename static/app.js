@@ -19,8 +19,7 @@ document.onreadystatechange = (event) => {
         show: 250,
         hide: 70
       }
-    })
-    ;
+    });
 };
 
 /*---------------------------------------*/
@@ -47,8 +46,6 @@ document.querySelector("#folder-btn").addEventListener("click", () => {
       if (!data.canceled) {
         document.querySelector("#actionfolderinput").value = data.filePaths[0];
       }
-      const excelValue = document.querySelector("#upload-excel-inpt").value;
-      console.log(excelValue);
     })
     .catch((err) => {
       console.log('Error uploading excel file', err);
@@ -378,9 +375,9 @@ document.querySelector("#PostContentsBtn").addEventListener("click", () => {
 document.querySelector("#upload-excel-inp").addEventListener("change", (e) => {
   const file = e.target.files[0];
   ipcRenderer
-  .invoke("load-links-from-excel", { name: file.name, path: file.path })
-  .then((data) => {
-    if (data.status === 'success') {
+    .invoke("load-links-from-excel", { name: file.name, path: file.path })
+    .then((data) => {
+      if (data.status === 'success') {
         $('#excel-link-path').text('Đã nhập thông tin link từ file: ' + file.name);
         invokeLoadPostFromFolder(PostFolderPath);
         console.log('Đã upload file excel thành công');
@@ -472,4 +469,42 @@ ipcRenderer.on("clearDiv", (event, data) => {
   data.elemlist.forEach(elementId => {
     $(`#${elementId}`).empty()
   });
+});
+
+/*---------------------------------------*/
+/* HANDLE update process when start app
+/*---------------------------------------*/
+ipcRenderer.on("checking_for_update", (event, data) => {
+  console.log('checking_for_update');
+  $('#dimmer_text').text(`Kiểm tra cập nhật!`);
+});
+
+
+ipcRenderer.on("update-available", (event, data) => {
+  console.log('update-available', data);
+  $('#dimmer_text').text(`Phiên bản mới: ${data.info.releaseName} - Đang tải !`);
+});
+
+ipcRenderer.on("update-not-available", (event, data) => {
+  console.log('update-not-available', data);
+  $('#dimmer_text').text(`Không có cập nhật mới!`);
+  $('#dimmer').dimmer('hide');
+});
+
+ipcRenderer.on("download-progress", (event, data) => {
+  let percentDownload = data.percent.toFixed(0);
+  $('#dimmer_text').text(`Đang tải : ${percentDownload}%`);
+});
+
+ipcRenderer.on("update_downloaded", (event, data) => {
+  $('#dimmer_text').text(`Đang cài đặt.. !`);
+  setTimeout(() => {
+    ipcRenderer.invoke("restart_app");
+  }, 1500);
+});
+
+ipcRenderer.on("update-error", (event, data) => {
+  console.log('update-error', data);
+  $('#dimmer_text').text(`Có lỗi khi tải phiên bản mới, Vui lòng thử lại sau!`);
+  $('#dimmer').dimmer('hide');
 });

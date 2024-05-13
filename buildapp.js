@@ -6,7 +6,7 @@ builder.build({
     productName: "V69 Render Watermark",
     win: {
       target: {
-        target: "msi",
+        target: "nsis",
         arch: "x64",
       },
       icon: "./static/viet69_ico_app"
