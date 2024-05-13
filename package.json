@@ -1,7 +1,7 @@
 {
   "name": "v69-ffmpeg-render",
   "version": "1.0.0",
-  "description": "Viet69 Re-render video with ffmpeg in electron",
+  "description": "Viet69 render video with watermark app",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

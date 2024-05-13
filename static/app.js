@@ -20,6 +20,7 @@ document.onreadystatechange = (event) => {
         hide: 70
       }
     });
+
 };
 
 /*---------------------------------------*/
@@ -302,7 +303,7 @@ function invokeLoadPostFromFolder(folderPath) {
 document.querySelector("#upload-post").addEventListener("click", () => {
 
   ipcRenderer.invoke("upload-tab-clicked", {}).then((data) => {
-    console.log(data.message);
+    // console.log(data.message);
   });
 });
 
@@ -474,37 +475,45 @@ ipcRenderer.on("clearDiv", (event, data) => {
 /*---------------------------------------*/
 /* HANDLE update process when start app
 /*---------------------------------------*/
-ipcRenderer.on("checking_for_update", (event, data) => {
-  console.log('checking_for_update');
-  $('#dimmer_text').text(`Kiểm tra cập nhật!`);
-});
+function showDimmerWithText(text) {
+  $('#dimmer1').dimmer({ closable: false }).dimmer('show');
+  $('#dimmer_text').text(text);
+}
 
+ipcRenderer.on("checking_for_update", () => {
+  console.log('checking_for_update');
+  showDimmerWithText(`Kiểm tra cập nhật!`);
+});
 
 ipcRenderer.on("update-available", (event, data) => {
   console.log('update-available', data);
-  $('#dimmer_text').text(`Phiên bản mới: ${data.info.releaseName} - Đang tải !`);
+  showDimmerWithText(`Có bản cập nhật mới: ${data.info.releaseName}`);
 });
 
 ipcRenderer.on("update-not-available", (event, data) => {
   console.log('update-not-available', data);
-  $('#dimmer_text').text(`Không có cập nhật mới!`);
-  $('#dimmer').dimmer('hide');
+  showDimmerWithText(`Không có cập nhật mới!`);
+  setTimeout(() => {
+    $('#dimmer1').dimmer('hide');
+  }, 2000);
 });
 
 ipcRenderer.on("download-progress", (event, data) => {
   let percentDownload = data.percent.toFixed(0);
-  $('#dimmer_text').text(`Đang tải : ${percentDownload}%`);
+  showDimmerWithText(`Đang cập nhật : ${percentDownload}%`);
 });
 
-ipcRenderer.on("update_downloaded", (event, data) => {
-  $('#dimmer_text').text(`Đang cài đặt.. !`);
+ipcRenderer.on("update_downloaded", () => {
+  showDimmerWithText(`Đang cài đặt.. !`);
   setTimeout(() => {
     ipcRenderer.invoke("restart_app");
-  }, 1500);
+  }, 2000);
 });
 
 ipcRenderer.on("update-error", (event, data) => {
   console.log('update-error', data);
-  $('#dimmer_text').text(`Có lỗi khi tải phiên bản mới, Vui lòng thử lại sau!`);
-  $('#dimmer').dimmer('hide');
+  showDimmerWithText(`Có lỗi khi tải phiên bản mới, Vui lòng thử lại sau!`);
+  setTimeout(() => {
+    $('#dimmer1').dimmer('hide');
+  }, 2000);
 });

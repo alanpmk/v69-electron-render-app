@@ -62,8 +62,6 @@ const createWindow = () => {
   // devTools.removeMenu();
   // mainWin.webContents.setDevToolsWebContents(devTools.webContents);
   // mainWin.webContents.openDevTools({ mode: 'detach' });
-
-
 };
 
 // Sau khi khởi động thì mở Window
