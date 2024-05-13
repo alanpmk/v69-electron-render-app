@@ -106,12 +106,7 @@
   <div class="ui bottom attached tab segment h-full" data-tab="third">
     <div class="w-[80vw] mx-auto flex flex-col items-center">
       <div class="flex justify-between items-center space-x-1">
-        <input type="file" id="upload-excel-inp" class="ui invisible file input" accept=".xls, .xlsx">
-        <label for="upload-excel-inp" class="ui green icon button"
-          data-content="Tải file Exels có danh sách link lên để xử lý thêm link hàng loạt">
-          <i class="cloud upload alternate icon"></i>
-          Tải file links
-        </label>
+
         <!-- <button class="ui whatsapp button disabled" style="padding-left: 0.5em;padding-right: 0.5em;"
           data-content="Lấy thông tin từ tab link phát để xử lý, Chỉ hoạt động khi bạn tải link thành công từ tab 'Lấy link phát'">
           Lấy dữ liệu từ DB
@@ -126,7 +121,12 @@
             </label>
           </div>
         </div>
-
+        <input type="file" id="upload-excel-inp" class="ui invisible file input" accept=".xls, .xlsx">
+        <label for="upload-excel-inp" id="upload-excel-btn" class="ui green icon button disabled"
+          data-content="Tải file Exels có danh sách link lên để xử lý thêm link hàng loạt">
+          <i class="cloud upload alternate icon"></i>
+          Tải file links
+        </label>
       </div>
       <span id="excel-link-path" class=" truncate">Đã nhập thông tin link từ file:</span>
       <!-- Post content -->

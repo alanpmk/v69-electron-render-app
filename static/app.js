@@ -317,6 +317,7 @@ document.querySelector("#folder-upload-btn").addEventListener("click", () => {
         document.querySelector("#actionFolderUpLoadInput").value = data.filePaths[0];
         PostFolderPath = data.filePaths[0];
         invokeLoadPostFromFolder(PostFolderPath);
+        $('#upload-excel-btn').removeClass('disabled');
       }
     })
     .catch((err) => {
@@ -381,6 +382,7 @@ document.querySelector("#upload-excel-inp").addEventListener("change", (e) => {
       if (data.status === 'success') {
         $('#excel-link-path').text('Đã nhập thông tin link từ file: ' + file.name);
         invokeLoadPostFromFolder(PostFolderPath);
+
         console.log('Đã upload file excel thành công');
       }
 
