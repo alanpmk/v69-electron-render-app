@@ -4,6 +4,7 @@ window.$ = window.jQuery = require('jquery');
 
 let logoPath = '';
 let PostFolderPath = '';
+let excelName = '';
 document.onreadystatechange = (event) => {
   $('.menu .item').tab()
   $('.ui.dropdown')
@@ -301,7 +302,7 @@ function invokeLoadPostFromFolder(folderPath) {
 
 //Click vào upload bài viết tab - check và load token
 document.querySelector("#upload-post").addEventListener("click", () => {
-
+  $('#excel-link-path').text('Đã nhập thông tin link từ file: ' + excelName);
   ipcRenderer.invoke("upload-tab-clicked", {}).then((data) => {
     // console.log(data.message);
   });
@@ -310,6 +311,7 @@ document.querySelector("#upload-post").addEventListener("click", () => {
 // Click nút chọn folder chứa video và ảnh đã render
 document.querySelector("#folder-upload-btn").addEventListener("click", () => {
   $('#postContentsWrapper').empty();
+  $('#excel-link-path').text('Đã nhập thông tin link từ file: ' + excelName);
   ipcRenderer
     .invoke("select-folder")
     .then((data) => {
@@ -381,6 +383,7 @@ document.querySelector("#upload-excel-inp").addEventListener("change", (e) => {
     .then((data) => {
       if (data.status === 'success') {
         $('#excel-link-path').text('Đã nhập thông tin link từ file: ' + file.name);
+        excelName = file.name;
         invokeLoadPostFromFolder(PostFolderPath);
 
         console.log('Đã upload file excel thành công');
