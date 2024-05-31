@@ -294,10 +294,10 @@ async function createPost(title, content, categories, tags, embed, imagePath, po
       categories: categoryIds,
       tags: tagIds,
       featured_media,
-      meta: {
-        embed: embed,
-        thumb: thumb,
-        post_views_count: postViewsCount
+      custom_meta: {
+        embed: embed.toString(),
+        thumb: thumb.toString(),
+        post_views_count: postViewsCount.toString()
       }
     });
 

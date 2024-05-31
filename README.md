@@ -1,5 +1,7 @@
-để thêm vào theme UltimaTube cần add function để thêm custom_meta vào file fuctions.php
-<?php
+## Viet69 electron- Ứng dụng render video logo và upload themes UltimaTube
+-Để thêm vào theme UltimaTube cần add function để thêm custom_meta vào file fuctions.php
+
+```php
 function custom_rest_api_post_meta() {
     register_rest_field( 'post', 'custom_meta', array(
         'get_callback' => 'get_post_meta_for_api',
@@ -20,4 +22,4 @@ function update_post_meta_for_api( $value, $object, $field_name ) {
 }
 
 add_action( 'rest_api_init', 'custom_rest_api_post_meta' );
-?>
+```
